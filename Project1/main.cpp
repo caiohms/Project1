@@ -13,13 +13,14 @@ GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f;
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey;
+bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey;
 int forma = 1;
 int frame = 0;
 int mouseX, mouseY;
 float rAngle, time, time1, framerate, frametime, lasttime;
 float visionX = 0, visionY = 0, visionZ = 0, xPos = 0, yPos = 0, zPos = 20, speed = 0.1f;
 float lookingAtX, lookingAtY, lookingAtZ, versorVisionX, versorVisionY, versorVisionZ, visionMag;
+
 //void update(/*int value*/) {
 //	rAngle += 0.2f * animate;
 //	if (rAngle > 360) rAngle -= 360;
@@ -33,196 +34,6 @@ void initGL() {
 	glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
 	glShadeModel(GL_FLAT);     // Enable smooth shading
-}
-
-void cubo(float a) {
-	glColor3f(.5, 0.2, 0.1);
-	glBegin(GL_TRIANGLE_STRIP);
-	glVertex3f(-a / 2, a / 2, a / 2);
-	glVertex3f(-a / 2, -a / 2, a / 2);
-	glVertex3f(a / 2, a / 2, a / 2);
-	glVertex3f(a / 2, -a / 2, a / 2);
-	glVertex3f(a / 2, a / 2, -a / 2);
-	glVertex3f(a / 2, -a / 2, -a / 2);
-	glVertex3f(-a / 2, a / 2, -a / 2);
-	glVertex3f(-a / 2, -a / 2, -a / 2);
-	glVertex3f(-a / 2, a / 2, a / 2);
-	glVertex3f(-a / 2, -a / 2, a / 2);
-	glEnd();
-
-	glColor3f(0.4, 0.1, 0.1);
-	glBegin(GL_TRIANGLE_STRIP);
-	glVertex3f(-a / 2, a / 2, -a / 2);
-	glVertex3f(-a / 2, a / 2, a / 2);
-	glVertex3f(a / 2, a / 2, -a / 2);
-	glVertex3f(a / 2, a / 2, a / 2);
-	glEnd();
-
-	glColor3f(0.4, 0.2, 0.1);
-	glBegin(GL_TRIANGLE_STRIP);
-	glVertex3f(a / 2, -a / 2, -a / 2);
-	glVertex3f(a / 2, -a / 2, a / 2);
-	glVertex3f(-a / 2, -a / 2, -a / 2);
-	glVertex3f(-a / 2, -a / 2, a / 2);
-	glEnd();
-}
-
-void cone(float radius, float height, int nLados) {
-
-	double x, z;
-	glColor3f(1, 0.7, 0);
-	glBegin(GL_TRIANGLE_FAN); //BASE
-	glVertex3f(0.0, 0.0, 0.0);// centro
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = radius * sin(angle);
-		z = radius * cos(angle);
-		glVertex3f(x, 0.0, z);
-		
-	}
-	glEnd();
-	
-	glColor3f(0.7, 0.9, 0.3);
-	glBegin(GL_TRIANGLE_FAN); // LATERAL
-	glVertex3f(0.0, height, 0.0); // centro
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = radius * sin(angle);
-		z = radius * cos(angle);
-		glVertex3f(x, 0.0, z);
-	}
-	glEnd();
-
-}
-
-void cilindro(float radius, float height, int nLados) {
-
-	double x, z;
-	glColor3f(0.4, 0.9, 0);
-	glBegin(GL_TRIANGLE_FAN); //BASE
-	glVertex3f(0.0, 0.0, 0.0); // centro
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = radius * sin(angle);
-		z = radius * cos(angle);
-		glVertex3f(x, 0.0, z);
-	}
-	glEnd();
-
-	glBegin(GL_TRIANGLE_FAN); //TOPO
-	glVertex3f(0.0, height, 0.0); // centro
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = radius * sin(angle);
-		z = radius * cos(angle);
-		glVertex3f(x, height, z);
-	}
-	glEnd();
-
-	glColor3f(0.2, 0.2, 0.7);
-	glBegin(GL_TRIANGLE_STRIP); // LATERAL
-
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = radius * sin(angle);
-		z = radius * cos(angle);
-		glVertex3f(x, 0.0, z);
-		glVertex3f(x, height, z);
-	}
-	glEnd();
-
-}
-
-void tube(float innerRadius, float height, float thickness, int nLados) {
-	float outerRadius = innerRadius + thickness;
-	double x, z, xi, zi, xo, zo;
-
-	glBegin(GL_TRIANGLE_STRIP); //BASE
-	glColor3f(0.0, 1.0, 0.0);
-	glVertex3f(0.0, 0.0, 0.0);
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		xi = innerRadius * sin(angle);
-		zi = innerRadius * cos(angle);
-		xo = outerRadius * sin(angle);
-		zo = outerRadius * cos(angle);
-		glVertex3f(xi, 0, zi);
-		glVertex3f(xo, 0, zo);
-	}
-	glEnd();
-
-	glBegin(GL_TRIANGLE_STRIP); //TOPO
-	glColor3f(0.0, 1.0, 0.5);
-	glVertex3f(0.0, height, 0.0);
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		xi = innerRadius * sin(angle);
-		zi = innerRadius * cos(angle);
-		xo = outerRadius * sin(angle);
-		zo = outerRadius * cos(angle);
-		glVertex3f(xi, height, zi);
-		glVertex3f(xo, height, zo);
-	}
-	glEnd();
-
-
-	glBegin(GL_TRIANGLE_STRIP); // LATERAL INTERIOR
-	glColor3f(1.0, 0.6, 0.2);
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = innerRadius * sin(angle);
-		z = innerRadius * cos(angle);
-		glVertex3f(x, height, z);
-		glVertex3f(x, 0.0, z);
-		
-	}
-	glEnd();
-
-
-	glBegin(GL_TRIANGLE_STRIP); // LATERAL EXTERIOR
-	glColor3f(0.7, 0.4, 0.1);
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
-	{
-		x = outerRadius * sin(angle);
-		z = outerRadius * cos(angle);
-		glVertex3f(x, 0.0, z);
-		glVertex3f(x, height, z);
-	}
-	glEnd();
-}
-
-void comboTubes(float innerRadius, float height, float thickness, int nLados) {
-
-	glTranslatef(0.0, -height / 2, 0.0);
-	tube(innerRadius, height, thickness, nLados);
-	glTranslatef(0.0, height / 2, 0.0);
-
-	glTranslatef(0.0, 0.0, -height / 2);
-	glRotatef(90, 1.0f, 0.0f, 0.0f);
-	tube(innerRadius, height, thickness, nLados);
-	glRotatef(-90, 1.0f, 0.0f, 0.0f);
-	glTranslatef(0.0, 0.0, height / 2);
-
-	glTranslatef(height / 2, 0.0, 0.0);
-	glRotatef(90, 0.0f, 0.0f, 1.0f);
-	tube(innerRadius, height, thickness, nLados);
-	glRotatef(-90, 0.0f, 0.0f, 1.0f);
-	glTranslatef(-height / 2, 0.0, 0.0);
-}
-
-void xyzLines() {
-	// Drawing XYZ Axis
-	glBegin(GL_LINES);
-	glColor3f(1.0, 0.0, 0.0); // Red - X (to rigth)
-	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(+nRange, 0.0, 0.0);
-	glColor3f(0.0, 1.0, 0.0); // Green - Y (to up)
-	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(0.0, +nRange, 0.0);
-	glColor3f(0.0, 0.0, 1.0); // Blue - Z (leaving the screen)
-	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(0.0, 0.0, +nRange);
-	glEnd();
 }
 
 void RenderString(float x, float y, void* font, const char* string) {
@@ -244,35 +55,46 @@ void processSpecialKeys(int key, int x, int y) {
 	printf("%d   -   %d, %d\n", key, x, y);
 	switch (key) {
 	case GLUT_KEY_LEFT:
-		angleY--;
-		//rateY--;
+		leftKey = true;
 		break;
 	case GLUT_KEY_RIGHT:
-		angleY++;
-		//rateY++;
+		rightKey = true;
 		break;
 	case GLUT_KEY_UP:
-		angleX--;
-		//rateX--;
+		upKey = true;
 		break;
 	case GLUT_KEY_DOWN:
-		angleX++;
-		//rateX++;
+		downKey = true;
 		break;
 	case GLUT_KEY_PAGE_UP:
-		angleZ++;
-		//rateZ++;
+		pgUpKey = true;
 		break;
 	case GLUT_KEY_PAGE_DOWN:
-		angleZ--;
-		//rateZ--;
+		pgDnKey = true;
 		break;
 	}
 }
 
 void processSpecialKeysUp(int key, int x, int y) {
 	switch (key) {
-
+	case GLUT_KEY_LEFT:
+		leftKey = false;
+		break;
+	case GLUT_KEY_RIGHT:
+		rightKey = false;
+		break;
+	case GLUT_KEY_UP:
+		upKey = false;
+		break;
+	case GLUT_KEY_DOWN:
+		downKey = false;
+		break;
+	case GLUT_KEY_PAGE_UP:
+		pgUpKey = false;
+		break;
+	case GLUT_KEY_PAGE_DOWN:
+		pgDnKey = false;
+		break;
 	}
 }
 
@@ -378,7 +200,7 @@ void mouse(int button, int state, int x, int y)
 	if ((button == 3) || (button == 4))
 	{
 		if (state == GLUT_UP) return;
-		(button == 3) ? (nRange -= 0.5, angleV -=1) : (nRange += 0.5, angleV += 1);
+		(button == 3) ? (projMode ? nRange -= 0.5 : angleV -=1) : (projMode ? nRange += 0.5 : angleV += 1);
 	}
 	else {  
 		//printf("Button %s At %d %d\n", (state == GLUT_DOWN) ? "Down" : "Up", x, y);
@@ -437,15 +259,36 @@ void movement() {
 		yPos -= speed;
 		lookingAtY -= speed;
 	}
-}
 
-void renderCoords() {
-	glColor3f(1.0, 0.0, 0.0);
-	RenderString3D(21.0f, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
-	glColor3f(0.0, 1.0, 0.0);
-	RenderString3D(0.0f, 21.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
-	glColor3f(0.0, 0.0, 1.0);
-	RenderString3D(0.0f, 0.0f, 21.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
+	if (leftKey)
+	{
+		angleY--;
+	}
+	
+	if (rightKey)
+	{
+		angleY++;
+	}
+	
+	if (upKey)
+	{
+		angleX--;
+	}
+
+	if (downKey)
+	{
+		angleX++;
+	}
+
+	if (pgUpKey)
+	{
+		angleZ++;
+	}
+
+	if (pgDnKey)
+	{
+		angleZ--;
+	}
 }
 
 float fps() {
@@ -500,6 +343,203 @@ void mouseMovement(int x, int y) {
 	mouseY = y;
 }
 
+void cubo(float a) {
+	glColor3f(.5, 0.2, 0.1);
+	glBegin(GL_TRIANGLE_STRIP);
+	glVertex3f(-a / 2, a / 2, a / 2);
+	glVertex3f(-a / 2, -a / 2, a / 2);
+	glVertex3f(a / 2, a / 2, a / 2);
+	glVertex3f(a / 2, -a / 2, a / 2);
+	glVertex3f(a / 2, a / 2, -a / 2);
+	glVertex3f(a / 2, -a / 2, -a / 2);
+	glVertex3f(-a / 2, a / 2, -a / 2);
+	glVertex3f(-a / 2, -a / 2, -a / 2);
+	glVertex3f(-a / 2, a / 2, a / 2);
+	glVertex3f(-a / 2, -a / 2, a / 2);
+	glEnd();
+
+	glColor3f(0.4, 0.1, 0.1);
+	glBegin(GL_TRIANGLE_STRIP);
+	glVertex3f(-a / 2, a / 2, -a / 2);
+	glVertex3f(-a / 2, a / 2, a / 2);
+	glVertex3f(a / 2, a / 2, -a / 2);
+	glVertex3f(a / 2, a / 2, a / 2);
+	glEnd();
+
+	glColor3f(0.4, 0.2, 0.1);
+	glBegin(GL_TRIANGLE_STRIP);
+	glVertex3f(a / 2, -a / 2, -a / 2);
+	glVertex3f(a / 2, -a / 2, a / 2);
+	glVertex3f(-a / 2, -a / 2, -a / 2);
+	glVertex3f(-a / 2, -a / 2, a / 2);
+	glEnd();
+}
+
+void cone(float radius, float height, int nLados) {
+
+	double x, z;
+	glColor3f(1, 0.7, 0);
+	glBegin(GL_TRIANGLE_FAN); //BASE
+	glVertex3f(0.0, 0.0, 0.0);// centro
+	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	{
+		x = radius * sin(angle);
+		z = radius * cos(angle);
+		glVertex3f(x, 0.0, z);
+	}
+	glEnd();
+
+	glColor3f(0.7, 0.9, 0.3);
+	glBegin(GL_TRIANGLE_FAN); // LATERAL
+	glVertex3f(0.0, height, 0.0); // centro
+	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
+	{
+		x = radius * sin(angle);
+		z = radius * cos(angle);
+		glVertex3f(x, 0.0, z);
+	}
+	glEnd();
+
+}
+
+void cilindro(float radius, float height, int nLados) {
+
+	double x, z;
+	glColor3f(0.4, 0.9, 0);
+	glBegin(GL_TRIANGLE_FAN); // BASE
+	glVertex3f(0.0, 0.0, 0.0); // centro
+	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	{
+		x = radius * sin(angle);
+		z = radius * cos(angle);
+		glVertex3f(x, 0.0, z);
+	}
+	glEnd();
+
+	glBegin(GL_TRIANGLE_FAN); //TOPO
+	glVertex3f(0.0, height, 0.0); // centro
+	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
+	{
+		x = radius * sin(angle);
+		z = radius * cos(angle);
+		glVertex3f(x, height, z);
+	}
+	glEnd();
+
+	glColor3f(0.2, 0.2, 0.7);
+	glBegin(GL_TRIANGLE_STRIP); // LATERAL
+
+	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	{
+		x = radius * sin(angle);
+		z = radius * cos(angle);
+		glVertex3f(x, 0.0, z);
+		glVertex3f(x, height, z);
+	}
+	glEnd();
+
+}
+
+void tube(float innerRadius, float height, float thickness, int nLados) {
+	float outerRadius = innerRadius + thickness;
+	double x, z, xi, zi, xo, zo;
+
+	glBegin(GL_TRIANGLE_STRIP); //BASE
+	glColor3f(0.0, 1.0, 0.0);
+	glVertex3f(0.0, 0.0, 0.0);
+	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
+	{
+		xi = innerRadius * sin(angle);
+		zi = innerRadius * cos(angle);
+		xo = outerRadius * sin(angle);
+		zo = outerRadius * cos(angle);
+		glVertex3f(xi, 0, zi);
+		glVertex3f(xo, 0, zo);
+	}
+	glEnd();
+
+	glBegin(GL_TRIANGLE_STRIP); //TOPO
+	glColor3f(0.0, 1.0, 0.5);
+	glVertex3f(0.0, height, 0.0);
+	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	{
+		xi = innerRadius * sin(angle);
+		zi = innerRadius * cos(angle);
+		xo = outerRadius * sin(angle);
+		zo = outerRadius * cos(angle);
+		glVertex3f(xi, height, zi);
+		glVertex3f(xo, height, zo);
+	}
+	glEnd();
+
+
+	glBegin(GL_TRIANGLE_STRIP); // LATERAL INTERIOR
+	glColor3f(1.0, 0.6, 0.2);
+	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	{
+		x = innerRadius * sin(angle);
+		z = innerRadius * cos(angle);
+		glVertex3f(x, height, z);
+		glVertex3f(x, 0.0, z);
+
+	}
+	glEnd();
+
+	glBegin(GL_TRIANGLE_STRIP); // LATERAL EXTERIOR
+	glColor3f(0.7, 0.4, 0.1);
+	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	{
+		x = outerRadius * sin(angle);
+		z = outerRadius * cos(angle);
+		glVertex3f(x, 0.0, z);
+		glVertex3f(x, height, z);
+	}
+	glEnd();
+}
+
+void comboTubes(float innerRadius, float height, float thickness, int nLados) {
+
+	glTranslatef(0.0, -height / 2, 0.0);
+	tube(innerRadius, height, thickness, nLados);
+	glTranslatef(0.0, height / 2, 0.0);
+
+	glTranslatef(0.0, 0.0, -height / 2);
+	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	tube(innerRadius, height, thickness, nLados);
+	glRotatef(-90, 1.0f, 0.0f, 0.0f);
+	glTranslatef(0.0, 0.0, height / 2);
+
+	glTranslatef(height / 2, 0.0, 0.0);
+	glRotatef(90, 0.0f, 0.0f, 1.0f);
+	tube(innerRadius, height, thickness, nLados);
+	glRotatef(-90, 0.0f, 0.0f, 1.0f);
+	glTranslatef(-height / 2, 0.0, 0.0);
+}
+
+void xyzLines() {
+	// Drawing XYZ Axis
+	glBegin(GL_LINES);
+	glColor3f(1.0, 0.0, 0.0); // Red - X (to rigth)
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(+nRange, 0.0, 0.0);
+	glColor3f(0.0, 1.0, 0.0); // Green - Y (to up)
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, +nRange, 0.0);
+	glColor3f(0.0, 0.0, 1.0); // Blue - Z (leaving the screen)
+	glVertex3f(0.0, 0.0, 0.0);
+	glVertex3f(0.0, 0.0, +nRange);
+	glEnd();
+}
+
+void renderCoords() {
+	glColor3f(1.0, 0.0, 0.0);
+	RenderString3D(nRange + 1, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
+	glColor3f(0.0, 1.0, 0.0);
+	RenderString3D(0.0f, nRange + 1, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
+	glColor3f(0.0, 0.0, 1.0);
+	RenderString3D(0.0f, 0.0f, nRange + 1, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
+}
+
 void renderInterface() {
 	frame++;
 	float w = glutGet(GLUT_WINDOW_WIDTH);
@@ -528,7 +568,7 @@ void renderInterface() {
 		"X (up)-(down)\n"
 		"Y (left)-(right)\n"
 		"Z (pgup)-(pgdn)\n\n"
-		"(a)nimate= %s\n"
+		"a(n)imate= %s\n"
 		"animate(x)= %s\n"
 		"animate(y)= %s\n"
 		"animate(z)= %s\n\n"
