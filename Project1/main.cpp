@@ -4,7 +4,6 @@
 #include <cmath>
 #include <string>
 
-/* Global variables */
 char title[64] = "OpenGL-PUC PR (ANIMAÇÃO - TESTE DE PROFUNDIDADE)" ;
 int RESOLUTION_STARTING_WIDTH = 1600;
 int RESOLUTION_STARTING_HEIGHT = 900;
