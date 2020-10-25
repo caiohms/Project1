@@ -4,7 +4,7 @@
 #include <cmath>
 #include <string>
 
-char title[64] = "OpenGL-PUC PR (ANIMAÇÃO - TESTE DE PROFUNDIDADE)" ;
+char title[64] = "OpenGL-PUCPR - Formas geométricas" ;
 int RESOLUTION_STARTING_WIDTH = 1600;
 int RESOLUTION_STARTING_HEIGHT = 900;
 
@@ -13,10 +13,10 @@ GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f;
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey;
+bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick;
 int forma = 1;
 int frame = 0;
-int mouseX, mouseY;
+int mouseX, mouseY, rClickX, rClickY, mouseMovedX, mouseMovedY, lastX, lastY;
 float rAngle, time, time1, framerate, frametime, lasttime;
 float visionX = 0, visionY = 0, visionZ = 0, xPos = 0, yPos = 0, zPos = 20, speed = 0.1f;
 float lookingAtX, lookingAtY, lookingAtZ, versorVisionX, versorVisionY, versorVisionZ, visionMag;
@@ -197,13 +197,59 @@ void processNormalKeysUp(unsigned char key, int x, int y) {
 
 void mouse(int button, int state, int x, int y)
 {
+	printf("Button %s At %d %d\n", (state == GLUT_DOWN) ? "Down" : "Up", x, y);
 	if ((button == 3) || (button == 4))
 	{
 		if (state == GLUT_UP) return;
 		(button == 3) ? (projMode ? nRange -= 0.5 : angleV -=1) : (projMode ? nRange += 0.5 : angleV += 1);
 	}
-	else {  
-		//printf("Button %s At %d %d\n", (state == GLUT_DOWN) ? "Down" : "Up", x, y);
+	if (button == 2)
+	{
+		
+		if (state == GLUT_DOWN)
+		{
+			rClick = true;
+			lastX = rClickX = x;
+			lastY = rClickY = y;
+		}
+		else
+		{
+			rClick = false;
+			mouseMovedX = 0;
+			mouseMovedY = 0;
+		}
+		
+	}
+}
+
+void mouseMovement(int x, int y) {
+	mouseX = x;
+	mouseY = y;
+	
+	if (rClick)
+	{
+		mouseMovedX = x - lastX;
+		mouseMovedY = y - lastY;
+		
+
+		float viewAngleY;
+		//versorVisionX
+		viewAngleY = (acos(versorVisionY) * 180 / M_PI);
+		//versorVisionZ 
+		printf("moved %d, %d viewAngleY = %f\n", mouseMovedX, mouseMovedY, viewAngleY);
+
+			visionMag;
+
+			//todo
+
+		lookingAtY -= mouseMovedY ;
+		//lookingAtY -= mouseMovedY;
+		//lookingAtY -= mouseMovedY;
+
+		lastX = x;
+		lastY = y;
+
+
 	}
 }
 
@@ -221,10 +267,11 @@ void movement() {
 	if (aKey)
 	{
 		xPos += (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		yPos += versorVisionY * speed;
+		//yPos = versorVisionY * speed;
 		zPos += (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
+
 		lookingAtX += (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		lookingAtY += versorVisionY * speed;
+		//lookingAtY += versorVisionY * speed;
 		lookingAtZ += (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
 	}
 
@@ -241,10 +288,10 @@ void movement() {
 	if (dKey)
 	{
 		xPos -= (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		yPos -= versorVisionY * speed;
+		//yPos -= versorVisionY * speed;
 		zPos -= (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
 		lookingAtX -= (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		lookingAtY -= versorVisionY * speed;
+		//lookingAtY -= versorVisionY * speed;
 		lookingAtZ -= (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
 	}
 
@@ -336,11 +383,6 @@ void loadWorldPerspProj() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	gluLookAt(1, 100, 100, 0, 0, 0, 0, 1, 0);
-}
-
-void mouseMovement(int x, int y) {
-	mouseX = x;
-	mouseY = y;
 }
 
 void cubo(float a) {
@@ -700,8 +742,6 @@ void render() {
 	glutPostRedisplay();
 }
 
-/* Handler for window re-size event. Called back when the window first appears and
-whenever the window is re-sized with its new width and height */
 void reshape(GLsizei w, GLsizei h) {
 	if (h == 0) h = 1;
 	// Especifica as dimensões da Viewport
@@ -724,6 +764,7 @@ int main(int argc, char** argv) {
 	glutSpecialUpFunc(processSpecialKeysUp);
 	glutMouseFunc(mouse);
 	glutPassiveMotionFunc(mouseMovement);
+	glutMotionFunc(mouseMovement);
 	//glutIdleFunc(render);
 	glutReshapeFunc(reshape);         // Register callback handler for window re-size event
 	initGL();   
