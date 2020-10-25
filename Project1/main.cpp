@@ -8,9 +8,9 @@ char title[64] = "OpenGL-PUCPR - Formas geométricas" ;
 int RESOLUTION_STARTING_WIDTH = 1600;
 int RESOLUTION_STARTING_HEIGHT = 900;
 
-GLfloat nRange = 20.0f, angleV = 70.0f, fAspect;
-GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f;
-GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f;
+GLfloat nRange = 20.0f, angleV = 70.0f, fAspect; 
+GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
+GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
 bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick;
@@ -18,8 +18,20 @@ int forma = 1;
 int frame = 0;
 int mouseX, mouseY, rClickX, rClickY, mouseMovedX, mouseMovedY, lastX, lastY;
 float rAngle, time, time1, framerate, frametime, lasttime;
-float visionX = 0, visionY = 0, visionZ = 0, xPos = 0, yPos = 0, zPos = 20, speed = 0.1f;
-float lookingAtX, lookingAtY, lookingAtZ, versorVisionX, versorVisionY, versorVisionZ, visionMag;
+float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw;
+float 
+	lookingAtX = 0,
+	lookingAtY = 0, 
+	lookingAtZ = 0,
+	visionX = 0,
+	visionY = 0, 
+	visionZ = 0, 
+	xPos = 0, 
+	yPos = 0, 
+	zPos = 1, 
+	speed = 0.1f;
+
+bool firstStart = true;
 
 //void update(/*int value*/) {
 //	rAngle += 0.2f * animate;
@@ -34,6 +46,15 @@ void initGL() {
 	glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
 	glShadeModel(GL_FLAT);     // Enable smooth shading
+}
+
+float toRadians(float angle) {
+	return angle * M_PI / 180;
+}
+
+float toDegrees(float radianAngle)
+{
+	return radianAngle / (M_PI / 180);
 }
 
 void RenderString(float x, float y, void* font, const char* string) {
@@ -228,28 +249,35 @@ void mouseMovement(int x, int y) {
 	
 	if (rClick)
 	{
+		float sensitivity = 0.1;
 		mouseMovedX = x - lastX;
 		mouseMovedY = y - lastY;
 		
-
 		float viewAngleY;
 		//versorVisionX
-		viewAngleY = (acos(versorVisionY) * 180 / M_PI);
+		viewAngleY = (toDegrees( acos(versorVisionY))-90);
 		//versorVisionZ 
-		printf("moved %d, %d viewAngleY = %f\n", mouseMovedX, mouseMovedY, viewAngleY);
+		// (visionY = (lookingAtY - yPos)) / visionMag;
+		printf("\n", viewAngleY);
 
-			visionMag;
+		cameraPitch += mouseMovedY * sensitivity ;
+		cameraYaw -= mouseMovedX * sensitivity;
 
-			//todo
+		if (cameraPitch > 80) cameraPitch = 80;
+		if (cameraPitch < -80) cameraPitch = -80;
 
-		lookingAtY -= mouseMovedY ;
-		//lookingAtY -= mouseMovedY;
+		printf("cameraPitch = %f sin(toRadians(cameraPitch)) = %f viewAngleY = %f\n", cameraPitch, sin(toRadians(cameraPitch)), viewAngleY);
+		printf("lookingAtY %f = sin(toRadians(cameraPitch)) %f * visionMag %f\n", lookingAtY, sin(toRadians(cameraPitch)), visionMag);
+		printf("versorVisionY %f = (visionY %f = (lookingAtY %f - yPos %f)) / visionMag %f\n", versorVisionY, visionY, lookingAtY, yPos, visionMag);
+		
+		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
+		lookingAtY = yPos + sin(toRadians(cameraPitch));
+		lookingAtZ = zPos + sin(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
+		
 		//lookingAtY -= mouseMovedY;
 
 		lastX = x;
 		lastY = y;
-
-
 	}
 }
 
@@ -583,6 +611,7 @@ void renderCoords() {
 }
 
 void renderInterface() {
+
 	frame++;
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
@@ -667,6 +696,18 @@ void renderInterface() {
 
 void renderWorld() {
 	//update();
+
+	//if (firstStart)
+	//{
+	//	firstStart = false;
+	//	
+	//}
+
+	//lookingAtX = xPos + versorVisionX;
+	//printf("lookingAtX = %f  xPos = %f  versorVisionX = %f\n", lookingAtX, xPos, versorVisionX);
+	//lookingAtY = yPos + versorVisionY;
+	//lookingAtZ = zPos + versorVisionZ;
+
 	projMode ? loadWorldOrthoProj() : loadWorldPerspProj();
 	
 	glMatrixMode(GL_MODELVIEW);        // To operate on model-view matrix
@@ -690,9 +731,8 @@ void renderWorld() {
 	glRotatef(x, 1.0f, 0.0f, 0.0f);
 	glRotatef(y, 0.0f, 1.0f, 0.0f);
 	glRotatef(z, 0.0f, 0.0f, 1.0f);
-	
-	visionMag = sqrt(pow(visionX, 2) + pow(visionY, 2) + pow(visionZ, 2));
 
+	visionMag = sqrt(pow(visionX, 2) + pow(visionY, 2) + pow(visionZ, 2));
 	versorVisionX = (visionX = (lookingAtX - xPos)) / visionMag;
 	versorVisionY = (visionY = (lookingAtY - yPos)) / visionMag;
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
