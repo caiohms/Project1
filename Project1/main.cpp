@@ -13,12 +13,13 @@ GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined 
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick;
+bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, escKey;
 int forma = 1;
-int frame = 0;
+int triangleCount, frame = 0;
 int mouseX, mouseY, rClickX, rClickY, mouseMovedX, mouseMovedY, lastX, lastY;
-float rAngle, time, time1, framerate, frametime, lasttime;
-float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw;
+float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
+float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw = 270.0f;
+
 float 
 	lookingAtX = 0,
 	lookingAtY = 0, 
@@ -28,10 +29,10 @@ float
 	visionZ = 0, 
 	xPos = 0, 
 	yPos = 0, 
-	zPos = 1, 
-	speed = 0.1f;
+	zPos = 20, 
+	speed = 0.2f;
 
-bool firstStart = true;
+//bool firstStart = true;
 
 //void update(/*int value*/) {
 //	rAngle += 0.2f * animate;
@@ -122,7 +123,8 @@ void processSpecialKeysUp(int key, int x, int y) {
 void processNormalKeys(unsigned char key, int x, int y) {
 	printf("%c   -   %d, %d\n", key, x, y);
 	switch (key) {
-		
+	case 27:
+		escKey = escKey ? false : true;
 	case 114:  // r
 		rAngle = 0;
 		angleX = 0;
@@ -222,7 +224,7 @@ void mouse(int button, int state, int x, int y)
 	if ((button == 3) || (button == 4))
 	{
 		if (state == GLUT_UP) return;
-		(button == 3) ? (projMode ? nRange -= 0.5 : angleV -=1) : (projMode ? nRange += 0.5 : angleV += 1);
+		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -=2.0) : (projMode ? nRange += 0.5 : angleV += 1);
 	}
 	if (button == 2)
 	{
@@ -252,23 +254,18 @@ void mouseMovement(int x, int y) {
 		float sensitivity = 0.1;
 		mouseMovedX = x - lastX;
 		mouseMovedY = y - lastY;
-		
-		float viewAngleY;
-		//versorVisionX
-		viewAngleY = (toDegrees( acos(versorVisionY))-90);
-		//versorVisionZ 
-		// (visionY = (lookingAtY - yPos)) / visionMag;
-		printf("\n", viewAngleY);
 
-		cameraPitch += mouseMovedY * sensitivity ;
-		cameraYaw -= mouseMovedX * sensitivity;
+		cameraPitch -= mouseMovedY * sensitivity ;
+		cameraYaw += mouseMovedX * sensitivity;
 
 		if (cameraPitch > 80) cameraPitch = 80;
 		if (cameraPitch < -80) cameraPitch = -80;
 
-		printf("cameraPitch = %f sin(toRadians(cameraPitch)) = %f viewAngleY = %f\n", cameraPitch, sin(toRadians(cameraPitch)), viewAngleY);
-		printf("lookingAtY %f = sin(toRadians(cameraPitch)) %f * visionMag %f\n", lookingAtY, sin(toRadians(cameraPitch)), visionMag);
-		printf("versorVisionY %f = (visionY %f = (lookingAtY %f - yPos %f)) / visionMag %f\n", versorVisionY, visionY, lookingAtY, yPos, visionMag);
+		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw;
+
+		//printf("cameraPitch = %f sin(toRadians(cameraPitch)) = %f viewAngleY = %f\n", cameraPitch, sin(toRadians(cameraPitch)), viewAngleY);
+		//printf("lookingAtY %f = sin(toRadians(cameraPitch)) %f * visionMag %f\n", lookingAtY, sin(toRadians(cameraPitch)), visionMag);
+		//printf("versorVisionY %f = (visionY %f = (lookingAtY %f - yPos %f)) / visionMag %f\n", versorVisionY, visionY, lookingAtY, yPos, visionMag);
 		
 		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
 		lookingAtY = yPos + sin(toRadians(cameraPitch));
@@ -384,7 +381,7 @@ float ftime() {
 }
 
 void definirTitle() {
-	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - %dx%d  %.1fFPS %.0fms ", glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), fps(), ftime());
+	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - %dx%d  %.1fFPS %.0fms ", glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), calculatedFramerate, calculatedFrametime);
 	glutSetWindowTitle(title);
 }
 
@@ -414,7 +411,7 @@ void loadWorldPerspProj() {
 }
 
 void cubo(float a) {
-	glColor3f(.5, 0.2, 0.1);
+	//glColor3f(.5, 0.2, 0.1);
 	glBegin(GL_TRIANGLE_STRIP);
 	glVertex3f(-a / 2, a / 2, a / 2);
 	glVertex3f(-a / 2, -a / 2, a / 2);
@@ -428,7 +425,7 @@ void cubo(float a) {
 	glVertex3f(-a / 2, -a / 2, a / 2);
 	glEnd();
 
-	glColor3f(0.4, 0.1, 0.1);
+	//glColor3f(0.4, 0.1, 0.1);
 	glBegin(GL_TRIANGLE_STRIP);
 	glVertex3f(-a / 2, a / 2, -a / 2);
 	glVertex3f(-a / 2, a / 2, a / 2);
@@ -436,7 +433,7 @@ void cubo(float a) {
 	glVertex3f(a / 2, a / 2, a / 2);
 	glEnd();
 
-	glColor3f(0.4, 0.2, 0.1);
+	//glColor3f(0.4, 0.2, 0.1);
 	glBegin(GL_TRIANGLE_STRIP);
 	glVertex3f(a / 2, -a / 2, -a / 2);
 	glVertex3f(a / 2, -a / 2, a / 2);
@@ -448,25 +445,27 @@ void cubo(float a) {
 void cone(float radius, float height, int nLados) {
 
 	double x, z;
-	glColor3f(1, 0.7, 0);
+	//glColor3f(1, 0.7, 0);
 	glBegin(GL_TRIANGLE_FAN); //BASE
 	glVertex3f(0.0, 0.0, 0.0);// centro
-	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
 		z = radius * cos(angle);
 		glVertex3f(x, 0.0, z);
+		
 	}
 	glEnd();
 
-	glColor3f(0.7, 0.9, 0.3);
+	//glColor3f(0.7, 0.9, 0.3);
 	glBegin(GL_TRIANGLE_FAN); // LATERAL
 	glVertex3f(0.0, height, 0.0); // centro
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
+	for (double angle = 0.0; angle <= (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
 		z = radius * cos(angle);
 		glVertex3f(x, 0.0, z);
+		
 	}
 	glEnd();
 
@@ -475,10 +474,10 @@ void cone(float radius, float height, int nLados) {
 void cilindro(float radius, float height, int nLados) {
 
 	double x, z;
-	glColor3f(0.4, 0.9, 0);
+	//glColor3f(0.4, 0.9, 0);
 	glBegin(GL_TRIANGLE_FAN); // BASE
 	glVertex3f(0.0, 0.0, 0.0); // centro
-	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
 		z = radius * cos(angle);
@@ -488,7 +487,7 @@ void cilindro(float radius, float height, int nLados) {
 
 	glBegin(GL_TRIANGLE_FAN); //TOPO
 	glVertex3f(0.0, height, 0.0); // centro
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
+	for (double angle = 0.0; angle <= (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
 		z = radius * cos(angle);
@@ -496,10 +495,10 @@ void cilindro(float radius, float height, int nLados) {
 	}
 	glEnd();
 
-	glColor3f(0.2, 0.2, 0.7);
+	//glColor3f(0.2, 0.2, 0.7);
 	glBegin(GL_TRIANGLE_STRIP); // LATERAL
 
-	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
 		z = radius * cos(angle);
@@ -517,7 +516,7 @@ void tube(float innerRadius, float height, float thickness, int nLados) {
 	glBegin(GL_TRIANGLE_STRIP); //BASE
 	glColor3f(0.0, 1.0, 0.0);
 	glVertex3f(0.0, 0.0, 0.0);
-	for (double angle = 0.0; angle < (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
+	for (double angle = 0.0; angle <= (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
 	{
 		xi = innerRadius * sin(angle);
 		zi = innerRadius * cos(angle);
@@ -531,7 +530,7 @@ void tube(float innerRadius, float height, float thickness, int nLados) {
 	glBegin(GL_TRIANGLE_STRIP); //TOPO
 	glColor3f(0.0, 1.0, 0.5);
 	glVertex3f(0.0, height, 0.0);
-	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		xi = innerRadius * sin(angle);
 		zi = innerRadius * cos(angle);
@@ -545,7 +544,7 @@ void tube(float innerRadius, float height, float thickness, int nLados) {
 
 	glBegin(GL_TRIANGLE_STRIP); // LATERAL INTERIOR
 	glColor3f(1.0, 0.6, 0.2);
-	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = innerRadius * sin(angle);
 		z = innerRadius * cos(angle);
@@ -557,7 +556,7 @@ void tube(float innerRadius, float height, float thickness, int nLados) {
 
 	glBegin(GL_TRIANGLE_STRIP); // LATERAL EXTERIOR
 	glColor3f(0.7, 0.4, 0.1);
-	for (double angle = (2.0 * M_PI); angle > 0.0; angle -= (2.0 * M_PI / nLados))
+	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = outerRadius * sin(angle);
 		z = outerRadius * cos(angle);
@@ -586,19 +585,50 @@ void comboTubes(float innerRadius, float height, float thickness, int nLados) {
 	glTranslatef(-height / 2, 0.0, 0.0);
 }
 
-void xyzLines() {
-	// Drawing XYZ Axis
+void xyzLines2d() {
 	glBegin(GL_LINES);
-	glColor3f(1.0, 0.0, 0.0); // Red - X (to rigth)
+	glColor3f(1.0, 0.0, 0.0); // Red - X
 	glVertex3f(0.0, 0.0, 0.0);
 	glVertex3f(+nRange, 0.0, 0.0);
-	glColor3f(0.0, 1.0, 0.0); // Green - Y (to up)
+	glColor3f(0.0, 1.0, 0.0); // Green - Y
 	glVertex3f(0.0, 0.0, 0.0);
 	glVertex3f(0.0, +nRange, 0.0);
-	glColor3f(0.0, 0.0, 1.0); // Blue - Z (leaving the screen)
+	glColor3f(0.0, 0.0, 1.0); // Blue - Z
 	glVertex3f(0.0, 0.0, 0.0);
 	glVertex3f(0.0, 0.0, +nRange);
 	glEnd();
+}
+
+void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFactor = 1, bool pointy = 0) {
+
+	float finalLength = sizeFactor * lengthFactor;
+	float finalThickness = sizeFactor * thicknessFactor;
+
+	glColor3f(1.0, 0.0, 0.0); // Red - X 
+
+	glRotatef(-90, 0.0f, 0.0f, 1.0f);
+	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
+	glTranslatef(0, 20 * finalLength, 0);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
+	glTranslatef(0, -20 * finalLength, 0);
+	glRotatef(90, 0.0f, 0.0f, 1.0f);
+
+	glColor3f(0.0, 1.0, 0.0); // Green - Y
+
+	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
+	glTranslatef(0, 20 * finalLength, 0);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
+	glTranslatef(0, -20 * finalLength, 0);
+
+	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
+
+	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
+	glTranslatef(0, 20 * finalLength, 0);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
+	glTranslatef(0, -20 * finalLength, 0);
+	glRotatef(-90, 1.0f, 0.0f, 0.0f);
+
 }
 
 void renderCoords() {
@@ -611,26 +641,31 @@ void renderCoords() {
 }
 
 void renderInterface() {
-
-	frame++;
+	
+	if (escKey)
+	{
+		return;
+	}
+	calculatedFrametime = ftime();
+	calculatedFramerate = fps();
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
 	//printf("%f   %f   %d   %d\n", h, rAngle, animate, animateX);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	glOrtho(0, w, 0, h, -1, 1);
+	glOrtho(0, w, 0, h, -1000, 1000);
 
 	glMatrixMode(GL_MODELVIEW);        // To operate on model-view matrix
 	glLoadIdentity();
 
-	char mouseBuffer[16];
-	snprintf(mouseBuffer, sizeof mouseBuffer, "+ (%d, %d)", mouseX, mouseY);
+	char mouseBuffer[32];
+	snprintf(mouseBuffer, sizeof mouseBuffer, "(%d, %d)\n%.1f\n%.1f", mouseX, mouseY, cameraYaw, cameraPitch);
 
-	RenderString(mouseX-5, h-mouseY-4, GLUT_BITMAP_HELVETICA_18, mouseBuffer);
+	RenderString(mouseX-5+7, h-mouseY-4-14, GLUT_BITMAP_HELVETICA_18, mouseBuffer);
 
 	char buffer[1024];
 	snprintf(buffer, sizeof buffer,
-		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %.0fms\n"
+		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %.0fms   global_speed_multiplier= %f\n"
 		"%s= %.1f%s\n"
 		"X= %.1f°\n"
 		"Y= %.1f°\n"
@@ -665,7 +700,7 @@ void renderInterface() {
 		"versorVisionZ= %f\n"
 		"lookingAtMag= %f\n",
 		projMode ? "glOrtho" : "gluPerspective",
-		(w / h), w, h, fps(), ftime(),
+		(w / h), w, h, calculatedFramerate, calculatedFrametime, speed,
 		projMode ? "nRange" : "angleV",
 		projMode ? nRange : angleV,
 		projMode ? "" : "°",
@@ -690,7 +725,17 @@ void renderInterface() {
 		visionMag);
 
 	RenderString(5, h-29, GLUT_BITMAP_HELVETICA_18, buffer);
+
+	glTranslatef(w-70, 80, 0);
+
+	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
+	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
+	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
+
+	xyzLines3d(.5, 5, 100, 1);
 	
+	glTranslatef(-10, -10, 0);
+
 	definirTitle();
 }
 
@@ -703,41 +748,42 @@ void renderWorld() {
 	//	
 	//}
 
-	//lookingAtX = xPos + versorVisionX;
-	//printf("lookingAtX = %f  xPos = %f  versorVisionX = %f\n", lookingAtX, xPos, versorVisionX);
-	//lookingAtY = yPos + versorVisionY;
-	//lookingAtZ = zPos + versorVisionZ;
-
 	projMode ? loadWorldOrthoProj() : loadWorldPerspProj();
 	
 	glMatrixMode(GL_MODELVIEW);        // To operate on model-view matrix
 	glLoadIdentity();                  // Reset the model-view matrix
 
-	if (!projMode) gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
+	//if (!projMode) 
+	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
 
 	front ? glPolygonMode(GL_FRONT, GL_LINE) : glPolygonMode(GL_FRONT, GL_FILL);
 	back ? glPolygonMode(GL_BACK, GL_LINE) : glPolygonMode(GL_BACK, GL_FILL);
 
-	movement();
+	movement(); // wasd movement function
 
-	float x = fmod(angleX += 0.5 * animate * animateX, 360);
-	float y = fmod(angleY += 0.5 * animate * animateY, 360);
-	float z = fmod(angleZ += 0.5 * animate * animateZ, 360);
+	angleX = (angleX >= 360) ? (angleX -= 360) : (angleX < 0) ? (angleX += 360) : angleX; // 0 <= angleX < 360
+	angleY = (angleY >= 360) ? (angleY -= 360) : (angleY < 0) ? (angleY += 360) : angleY;
+	angleZ = (angleZ >= 360) ? (angleZ -= 360) : (angleZ < 0) ? (angleZ += 360) : angleZ;
 
-	rotX = x = x < 0 ? x + 360 : x;
-	rotY = y = y < 0 ? y + 360 : y;
-	rotZ = z = z < 0 ? z + 360 : z;
+	rotX = angleX += 0.5 * animate * animateX; // rotX = arrow key angle * speed factor(0.5) * bool global animation * bool vector-specific animation 
+	rotY = angleY += 0.5 * animate * animateY;
+	rotZ = angleZ += 0.5 * animate * animateZ;
 
-	glRotatef(x, 1.0f, 0.0f, 0.0f);
-	glRotatef(y, 0.0f, 1.0f, 0.0f);
-	glRotatef(z, 0.0f, 0.0f, 1.0f);
+	printf("%f\n", rotX);
+
+	//cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw;
+
+	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
+	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
+	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	visionMag = sqrt(pow(visionX, 2) + pow(visionY, 2) + pow(visionZ, 2));
 	versorVisionX = (visionX = (lookingAtX - xPos)) / visionMag;
 	versorVisionY = (visionY = (lookingAtY - yPos)) / visionMag;
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
-	xyzLines();
+	xyzLines2d();
+	//xyzLines3d();
 	renderCoords();
 
 	//glRotatef(-rAngle, 1.0f, 1.0f, 0.0f);
@@ -745,6 +791,7 @@ void renderWorld() {
 	switch (forma)
 	{
 	case 1:
+		glColor3f(1, 0.7, 0);
 		cubo(10.0);
 		break;
 	case 2:
@@ -773,6 +820,7 @@ void renderWorld() {
 /* Handler for window-repaint event. Called back when the window first appears and
 whenever the window needs to be re-painted. */
 void render() {
+	frame++;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
 
 	renderWorld();
@@ -780,6 +828,8 @@ void render() {
 	
 	glutSwapBuffers();
 	glutPostRedisplay();
+
+	speed = calculatedFrametime * 0.0284f;
 }
 
 void reshape(GLsizei w, GLsizei h) {
@@ -805,6 +855,7 @@ int main(int argc, char** argv) {
 	glutMouseFunc(mouse);
 	glutPassiveMotionFunc(mouseMovement);
 	glutMotionFunc(mouseMovement);
+	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	//glutIdleFunc(render);
 	glutReshapeFunc(reshape);         // Register callback handler for window re-size event
 	initGL();   
