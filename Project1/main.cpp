@@ -15,9 +15,14 @@ GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (wit
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
 bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, escKey;
 int forma = 1;
-int triangleCount, frame = 0;
-int mouseX, mouseY, rClickX, rClickY, mouseMovedX, mouseMovedY, lastX, lastY;
-float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
+int frame = 0;
+int 
+	mouseX, // live mouse position X axis
+	mouseY, // live mouse position Y axis
+	rClickX, // mouse click X position
+	rClickY, // mouse click Y position
+	mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
+float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i;
 float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw = 270.0f;
 
 float 
@@ -58,19 +63,40 @@ float toDegrees(float radianAngle)
 	return radianAngle / (M_PI / 180);
 }
 
-void RenderString(float x, float y, void* font, const char* string) {
+void renderString(float x, float y, void* font, const char* string) {
 
 	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
-	glColor3f(1.0, 1.0, 0.0);
 	glRasterPos2f(x, y);
 	glutBitmapString(font, t);
 }
 
-void RenderString3D(float x, float y, float z, void* font, const char* string) {
+void renderString3D(float x, float y, float z, void* font, const char* string) {
 
 	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
 	glRasterPos3f(x, y, z);
 	glutBitmapString(font, t);
+}
+
+void renderStrokeString(float x, float y, const char* string, float scale, bool centered = false) {
+
+	void* font = GLUT_STROKE_MONO_ROMAN;
+	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
+
+	if (centered)
+	{
+		glColor3f(1.0, 1.0, 1.0);
+		glTranslatef(x - (glutStrokeLength(font, t) + glutStrokeWidth(font, 'a')) / 2 * scale, y, 10);
+		glScalef(scale, scale, scale);
+		glutStrokeString(font, t);
+		glLoadIdentity();
+	}
+	else
+	{
+		glTranslatef(x - glutStrokeLength(font, t) / 2 * scale, y, -10);
+		glScalef(scale, scale, scale);
+		glutStrokeString(font, t);
+		glLoadIdentity();
+	}
 }
 
 void processSpecialKeys(int key, int x, int y) {
@@ -251,34 +277,43 @@ void mouseMovement(int x, int y) {
 	
 	if (rClick)
 	{
-		float sensitivity = 0.1;
-		mouseMovedX = x - lastX;
+		float sensitivity = 0.1; // camera sensitivity
+
+		mouseMovedX = x - lastX; // mouse position changes
 		mouseMovedY = y - lastY;
-
-		cameraPitch -= mouseMovedY * sensitivity ;
-		cameraYaw += mouseMovedX * sensitivity;
-
-		if (cameraPitch > 80) cameraPitch = 80;
-		if (cameraPitch < -80) cameraPitch = -80;
-
-		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw;
-
-		//printf("cameraPitch = %f sin(toRadians(cameraPitch)) = %f viewAngleY = %f\n", cameraPitch, sin(toRadians(cameraPitch)), viewAngleY);
-		//printf("lookingAtY %f = sin(toRadians(cameraPitch)) %f * visionMag %f\n", lookingAtY, sin(toRadians(cameraPitch)), visionMag);
-		//printf("versorVisionY %f = (visionY %f = (lookingAtY %f - yPos %f)) / visionMag %f\n", versorVisionY, visionY, lookingAtY, yPos, visionMag);
-		
-		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
-		lookingAtY = yPos + sin(toRadians(cameraPitch));
-		lookingAtZ = zPos + sin(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
-		
-		//lookingAtY -= mouseMovedY;
-
 		lastX = x;
 		lastY = y;
+
+		if (!escKey) // blocks camera movement when ESC menu is open
+		{
+			cameraPitch -= mouseMovedY * sensitivity; // pitch and yaw change according to differences in mouse coordinates
+			cameraYaw += mouseMovedX * sensitivity;
+		}
+		
+		if (cameraPitch > 80) cameraPitch = 80; // limiting pitch angle between -80 and 80
+		if (cameraPitch < -80) cameraPitch = -80;
+
+		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw; // limiting yaw to (0, 360) interval
+		
+		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch)); // camera moves in a cylindrical coordiate system
+		lookingAtY = yPos + sin(toRadians(cameraPitch));
+		lookingAtZ = zPos + sin(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
 	}
 }
 
+//bool mouseOver(int mouseX, int mouseY, int bx, int by, int uy) {
+//	if (true)
+//	{
+//		return true;
+//	}
+//}
+
 void movement() {
+	if (escKey)
+	{
+		return;
+	}
+
 	if (wKey)
 	{
 		xPos += versorVisionX * speed;
@@ -407,7 +442,6 @@ void loadWorldPerspProj() {
 	gluPerspective(angleV, fAspect, .1, 100);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	gluLookAt(1, 100, 100, 0, 0, 0, 0, 1, 0);
 }
 
 void cubo(float a) {
@@ -506,7 +540,6 @@ void cilindro(float radius, float height, int nLados) {
 		glVertex3f(x, height, z);
 	}
 	glEnd();
-
 }
 
 void tube(float innerRadius, float height, float thickness, int nLados) {
@@ -585,6 +618,28 @@ void comboTubes(float innerRadius, float height, float thickness, int nLados) {
 	glTranslatef(-height / 2, 0.0, 0.0);
 }
 
+void draw2dBox(int bx, int by, int ux, int uy) {
+	
+	glBegin(GL_LINE_LOOP);
+	glVertex2i(bx, by);
+	glVertex2i(ux, by);
+	glVertex2i(ux, uy);
+	glVertex2i(bx, uy);
+	glEnd();
+
+}
+
+void draw2dBoxFilled(int bx, int by, int ux, int uy) {
+	
+	glBegin(GL_POLYGON);
+	glVertex2i(bx, by);
+	glVertex2i(ux, by);
+	glVertex2i(ux, uy);
+	glVertex2i(bx, uy);
+	glEnd();
+
+}
+
 void xyzLines2d() {
 	glBegin(GL_LINES);
 	glColor3f(1.0, 0.0, 0.0); // Red - X
@@ -633,35 +688,85 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 void renderCoords() {
 	glColor3f(1.0, 0.0, 0.0);
-	RenderString3D(nRange + 1, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
+	renderString3D(nRange + 1, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
 	glColor3f(0.0, 1.0, 0.0);
-	RenderString3D(0.0f, nRange + 1, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
+	renderString3D(0.0f, nRange + 1, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
 	glColor3f(0.0, 0.0, 1.0);
-	RenderString3D(0.0f, 0.0f, nRange + 1, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
+	renderString3D(0.0f, 0.0f, nRange + 1, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
+}
+
+void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text = "") {
+	float buttonMidX = buttonWidth / 2;
+	float buttonMidY = buttonHeight / 2;
+
+	float leftX = bx - buttonMidX;
+	float bottomY = by - buttonMidY;
+	float rightX = bx + buttonMidX;
+	float topY = by + buttonMidY;
+
+	char buffer[9];
+	snprintf(buffer, sizeof(buffer), text);
+
+	if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
+	{
+		
+		glColor3f(0.2, 0.2, 0.2);
+		draw2dBoxFilled(leftX, bottomY, rightX, topY);
+	}
+	else
+	{
+		glColor3f(0.4, 0.4, 0.4);
+		draw2dBoxFilled(leftX, bottomY, rightX, topY);
+
+	}
+	glColor3f(1, 1, 1);
+	renderStrokeString(bx + 8, bottomY + 9, buffer, 0.22, true);
+}
+
+void escapeMenu(int screenX, int screenY) {
+
+	int buttonWidth = 200;
+	int buttonHeight = 40;
+
+	/*glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_LINES);
+	glVertex2i(0, screenY/2);
+	glVertex2i(screenX, screenY/2);
+	glVertex2i(screenX/2, 0);
+	glVertex2i(screenX / 2, screenY);
+	glEnd();*/
+
+	glColor3f(1.0, 1.0, 0.0);
+	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue");
+	
 }
 
 void renderInterface() {
 	
-	if (escKey)
-	{
-		return;
-	}
-	calculatedFrametime = ftime();
-	calculatedFramerate = fps();
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
-	//printf("%f   %f   %d   %d\n", h, rAngle, animate, animateX);
-	glMatrixMode(GL_PROJECTION);
+	glMatrixMode(GL_PROJECTION); // setting up an orthogonal projection proportional to screen resolution
 	glLoadIdentity();
 	glOrtho(0, w, 0, h, -1000, 1000);
-
-	glMatrixMode(GL_MODELVIEW);        // To operate on model-view matrix
+	glMatrixMode(GL_MODELVIEW); // back to model view
 	glLoadIdentity();
 
-	char mouseBuffer[32];
+	glColor3f(1.0, 0.6, 0.0);
+	char mouseBuffer[32]; // mouse-cursor-following-text buffer
+	
 	snprintf(mouseBuffer, sizeof mouseBuffer, "(%d, %d)\n%.1f\n%.1f", mouseX, mouseY, cameraYaw, cameraPitch);
 
-	RenderString(mouseX-5+7, h-mouseY-4-14, GLUT_BITMAP_HELVETICA_18, mouseBuffer);
+	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_HELVETICA_18, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
+
+	if (escKey) // if ESC key is pressed, escape menu is loaded and nothing else in the interface
+	{
+		escapeMenu(w, h);
+		return;
+		//todo
+		// block camera rotation
+		// stop movement
+		//
+	}
 
 	char buffer[1024];
 	snprintf(buffer, sizeof buffer,
@@ -691,14 +796,8 @@ void renderInterface() {
 		"zPos= %f\n"
 		"lookingAtX= %f\n"
 		"lookingAtY= %f\n"
-		"lookingAtZ= %f\n"
-		"visionX= %f\n"
-		"visionY= %f\n"
-		"visionZ= %f\n"
-		"versorVisionX= %f\n"
-		"versorVisionY= %f\n"
-		"versorVisionZ= %f\n"
-		"lookingAtMag= %f\n",
+		"lookingAtZ= %f\n",
+
 		projMode ? "glOrtho" : "gluPerspective",
 		(w / h), w, h, calculatedFramerate, calculatedFrametime, speed,
 		projMode ? "nRange" : "angleV",
@@ -719,12 +818,10 @@ void renderInterface() {
 		forma == 5 ? "(5) [3 Tubos]" : "(5) 3 Tubos",
 		xPos, yPos, zPos,
 		lookingAtX, lookingAtY, lookingAtZ,
-		visionX, visionY, visionZ,
-		versorVisionX, versorVisionY, versorVisionZ,
+		visionX, visionY, visionZ);
 
-		visionMag);
-
-	RenderString(5, h-29, GLUT_BITMAP_HELVETICA_18, buffer);
+	glColor3f(1.0, 1.0, 0.0);
+	renderString(5, h-29, GLUT_BITMAP_HELVETICA_18, buffer);
 
 	glTranslatef(w-70, 80, 0);
 
@@ -735,23 +832,11 @@ void renderInterface() {
 	xyzLines3d(.5, 5, 100, 1);
 	
 	glTranslatef(-10, -10, 0);
-
-	definirTitle();
 }
 
 void renderWorld() {
-	//update();
 
-	//if (firstStart)
-	//{
-	//	firstStart = false;
-	//	
-	//}
-
-	projMode ? loadWorldOrthoProj() : loadWorldPerspProj();
-	
-	glMatrixMode(GL_MODELVIEW);        // To operate on model-view matrix
-	glLoadIdentity();                  // Reset the model-view matrix
+	                  
 
 	//if (!projMode) 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
@@ -769,9 +854,6 @@ void renderWorld() {
 	rotY = angleY += 0.5 * animate * animateY;
 	rotZ = angleZ += 0.5 * animate * animateZ;
 
-	printf("%f\n", rotX);
-
-	//cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw;
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
@@ -821,9 +903,21 @@ void renderWorld() {
 whenever the window needs to be re-painted. */
 void render() {
 	frame++;
+	calculatedFrametime = ftime();
+	calculatedFramerate = fps();
+	definirTitle();
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
 
-	renderWorld();
+	//3D
+	glEnable(GL_DEPTH_TEST); // preparing 3d world rendering
+	projMode ? loadWorldOrthoProj() : loadWorldPerspProj(); // loading chosen projection
+	glMatrixMode(GL_MODELVIEW); // swapping back to model view matrix
+	glLoadIdentity(); // load identity matrix
+	renderWorld(); // 3d stuff
+
+	// 2D
+	glDisable(GL_DEPTH_TEST); 
 	renderInterface();
 	
 	glutSwapBuffers();
