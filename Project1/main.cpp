@@ -13,14 +13,16 @@ GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined 
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, escKey;
+bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey;
 int forma = 1;
 int frame = 0;
 int 
-	mouseX, // live mouse position X axis
+	mouseX, // live mouse position X axis updated every frame
 	mouseY, // live mouse position Y axis
-	rClickX, // mouse click X position
-	rClickY, // mouse click Y position
+	rClickX, // mouse right click X position updates on right click and/or right click dragging
+	rClickY, // mouse right click Y position
+	lClickX, // mouse left click X position updates on left click (no dragging)
+	lClickY, // mouse left click Y position
 	mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
 float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i;
 float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw = 270.0f;
@@ -246,15 +248,18 @@ void processNormalKeysUp(unsigned char key, int x, int y) {
 
 void mouse(int button, int state, int x, int y)
 {
-	printf("Button %s At %d %d\n", (state == GLUT_DOWN) ? "Down" : "Up", x, y);
-	if ((button == 3) || (button == 4))
+	printf("%d Button %s At %d %d\n", button, (state == GLUT_DOWN) ? "Down" : "Up", x, y);
+
+	if (button == 0) // left click
 	{
-		if (state == GLUT_UP) return;
-		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -=2.0) : (projMode ? nRange += 0.5 : angleV += 1);
+		// Coordinates are saved and clicked state is used by other functions
+		lClick = true;
+		lClickX = x;
+		lClickY = y;
 	}
-	if (button == 2)
+
+	if (button == 2) // right click
 	{
-		
 		if (state == GLUT_DOWN)
 		{
 			rClick = true;
@@ -267,8 +272,15 @@ void mouse(int button, int state, int x, int y)
 			mouseMovedX = 0;
 			mouseMovedY = 0;
 		}
-		
 	}
+
+	if ((button == 3) || (button == 4)) // scroll wheel
+	{
+		if (state == GLUT_UP) return;
+		// scroll wheel changes nRange when in orthogonal projection and changes camera view angle when in perspective mode
+		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -=2.0) : (projMode ? nRange += 0.5 : angleV += 1);
+	}
+	
 }
 
 void mouseMovement(int x, int y) {
@@ -301,12 +313,12 @@ void mouseMovement(int x, int y) {
 	}
 }
 
-//bool mouseOver(int mouseX, int mouseY, int bx, int by, int uy) {
-//	if (true)
-//	{
-//		return true;
-//	}
-//}
+bool mouseOver(int mouseX, int mouseY, int bx, int by, int uy) {
+	if (true)
+	{
+		return true;
+	}
+}
 
 void movement() {
 	if (escKey)
@@ -695,7 +707,7 @@ void renderCoords() {
 	renderString3D(0.0f, 0.0f, nRange + 1, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
-void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text = "") {
+void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void (*f)(void)) {///////////////////////////////
 	float buttonMidX = buttonWidth / 2;
 	float buttonMidY = buttonHeight / 2;
 
@@ -709,24 +721,31 @@ void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* t
 
 	if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
 	{
-		
-		glColor3f(0.2, 0.2, 0.2);
+		lClick ? glColor3f(0.0, 1.0, 0.0) : glColor3f(0.3, 0.3, 0.3);
 		draw2dBoxFilled(leftX, bottomY, rightX, topY);
+		if (lClick) f();
+		
 	}
 	else
 	{
-		glColor3f(0.4, 0.4, 0.4);
+		glColor3f(0.1, 0.1, 0.1);
 		draw2dBoxFilled(leftX, bottomY, rightX, topY);
-
 	}
 	glColor3f(1, 1, 1);
-	renderStrokeString(bx + 8, bottomY + 9, buffer, 0.22, true);
+	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
+}
+
+
+void resumeButton() {
+	escKey = false;
 }
 
 void escapeMenu(int screenX, int screenY) {
 
 	int buttonWidth = 200;
 	int buttonHeight = 40;
+
+	
 
 	/*glColor3f(1.0, 1.0, 1.0);
 	glBegin(GL_LINES);
@@ -736,9 +755,15 @@ void escapeMenu(int screenX, int screenY) {
 	glVertex2i(screenX / 2, screenY);
 	glEnd();*/
 
+
 	glColor3f(1.0, 1.0, 0.0);
-	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue");
+	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
+
 	
+	//todo
+	//	dynamic button generation
+	//	option button
+	//	quit button
 }
 
 void renderInterface() {
@@ -758,14 +783,10 @@ void renderInterface() {
 
 	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_HELVETICA_18, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
 
-	if (escKey) // if ESC key is pressed, escape menu is loaded and nothing else in the interface
+	if (escKey) // if ESC key is pressed, only escape menu is loaded and all movement is blocked
 	{
 		escapeMenu(w, h);
 		return;
-		//todo
-		// block camera rotation
-		// stop movement
-		//
 	}
 
 	char buffer[1024];
@@ -797,7 +818,6 @@ void renderInterface() {
 		"lookingAtX= %f\n"
 		"lookingAtY= %f\n"
 		"lookingAtZ= %f\n",
-
 		projMode ? "glOrtho" : "gluPerspective",
 		(w / h), w, h, calculatedFramerate, calculatedFrametime, speed,
 		projMode ? "nRange" : "angleV",
@@ -923,6 +943,7 @@ void render() {
 	glutSwapBuffers();
 	glutPostRedisplay();
 
+	lClick = false;
 	speed = calculatedFrametime * 0.0284f;
 }
 
