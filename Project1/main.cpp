@@ -25,9 +25,9 @@ lClickX, // mouse left click X position updates on left click (no dragging)
 lClickY, // mouse left click Y position
 mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
 float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i;
-float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw = 270.0f;
-
-float
+float versorVisionX, versorVisionY, versorVisionZ, visionMag,
+cameraPitch = 0.0f,
+cameraYaw = 270.0f,
 lookingAtX = 0,
 lookingAtY = 0,
 lookingAtZ = 0,
@@ -37,7 +37,8 @@ visionZ = 0,
 xPos = 0,
 yPos = 0,
 zPos = 20,
-speed = 0.2f;
+speed = 0.2f,
+cameraSensitivity = 0.1f;
 
 //bool firstStart = true;
 
