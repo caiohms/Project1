@@ -4,42 +4,40 @@
 #include <cmath>
 #include <string>
 
-char title[64] = "OpenGL-PUCPR - Formas geométricas" ;
+char title[64] = "OpenGL-PUCPR - Formas geométricas";
 int RESOLUTION_STARTING_WIDTH = 1600;
 int RESOLUTION_STARTING_HEIGHT = 900;
 
-GLfloat nRange = 20.0f, angleV = 70.0f, fAspect; 
+GLfloat nRange = 20.0f, angleV = 70.0f, fAspect;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
-bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode;
+bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode, depthTest = true;
 bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey;
 int forma = 1;
 int frame = 0;
-int 
-	mouseX, // live mouse position X axis updated every frame
-	mouseY, // live mouse position Y axis
-	rClickX, // mouse right click X position updates on right click and/or right click dragging
-	rClickY, // mouse right click Y position
-	lClickX, // mouse left click X position updates on left click (no dragging)
-	lClickY, // mouse left click Y position
-	mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
-float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i, versorVisionX, versorVisionY, versorVisionZ, visionMag;
-float cameraPitch = 0.0f, 
-		cameraYaw = 270.0f,
-		cameraSensitivity = 0.1; // camera sensitivity
+int
+mouseX, // live mouse position X axis updated every frame
+mouseY, // live mouse position Y axis
+rClickX, // mouse right click X position updates on right click and/or right click dragging
+rClickY, // mouse right click Y position
+lClickX, // mouse left click X position updates on left click (no dragging)
+lClickY, // mouse left click Y position
+mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
+float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i;
+float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw = 270.0f;
 
-float 
-	lookingAtX = 0,
-	lookingAtY = 0, 
-	lookingAtZ = 0,
-	visionX = 0,
-	visionY = 0, 
-	visionZ = 0, 
-	xPos = 0, 
-	yPos = 0, 
-	zPos = 20, 
-	speed = 0.2f;
+float
+lookingAtX = 0,
+lookingAtY = 0,
+lookingAtZ = 0,
+visionX = 0,
+visionY = 0,
+visionZ = 0,
+xPos = 0,
+yPos = 0,
+zPos = 20,
+speed = 0.2f;
 
 //bool firstStart = true;
 
@@ -54,7 +52,7 @@ float
 void initGL() {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
-	glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
+	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
 	glShadeModel(GL_FLAT);     // Enable smooth shading
 }
@@ -70,36 +68,34 @@ float toDegrees(float radianAngle)
 
 void renderString(float x, float y, void* font, const char* string) {
 
-	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
 	glRasterPos2f(x, y);
-	glutBitmapString(font, (unsigned char*)t);
+	glutBitmapString(font, (unsigned char*)string);
 }
 
 void renderString3D(float x, float y, float z, void* font, const char* string) {
 
-	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
 	glRasterPos3f(x, y, z);
-	glutBitmapString(font, t);
+	glutBitmapString(font, (unsigned char*)string);
 }
 
 void renderStrokeString(float x, float y, const char* string, float scale, bool centered = false) {
 
 	void* font = GLUT_STROKE_MONO_ROMAN;
-	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
+	unsigned char* s = (unsigned char*)string;
 
 	if (centered)
 	{
 		glColor3f(1.0, 1.0, 1.0);
-		glTranslatef(x - (glutStrokeLength(font, t) + glutStrokeWidth(font, 'a')) / 2 * scale, y, 10);
+		glTranslatef(x - (glutStrokeLength(font, s) + glutStrokeWidth(font, 'a')) / 2 * scale, y, 10);
 		glScalef(scale, scale, scale);
-		glutStrokeString(font, t);
+		glutStrokeString(font, s);
 		glLoadIdentity();
 	}
 	else
 	{
-		glTranslatef(x - glutStrokeLength(font, t) / 2 * scale, y, -10);
+		glTranslatef(x - glutStrokeLength(font, s) / 2 * scale, y, -10);
 		glScalef(scale, scale, scale);
-		glutStrokeString(font, t);
+		glutStrokeString(font, s);
 		glLoadIdentity();
 	}
 }
@@ -196,7 +192,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		eKey = true;
 		break;
 	case 102: // f front
-		 front = front ? false : true;
+		front = front ? false : true;
 		break;
 	case 98: // b back
 		back = back ? false : true;
@@ -204,6 +200,10 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 99: // b back
 		cface = cface ? false : true;
 		cface ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
+		break;
+	case 116:
+		depthTest = depthTest ? false : true;
+		depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
 		break;
 	case 112: // p projection mode
 		projMode = projMode ? false : true;
@@ -281,15 +281,15 @@ void mouse(int button, int state, int x, int y)
 	{
 		if (state == GLUT_UP) return;
 		// scroll wheel changes nRange when in orthogonal projection and changes camera view angle when in perspective mode
-		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -=2.0) : (projMode ? nRange += 0.5 : angleV += 1);
+		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -= 2.0) : (projMode ? nRange += 0.5 : angleV += 1);
 	}
-	
+
 }
 
 void mouseMovement(int x, int y) {
 	mouseX = x;
 	mouseY = y;
-	
+
 	if (rClick)
 	{
 		mouseMovedX = x - lastX; // mouse position changes
@@ -302,12 +302,12 @@ void mouseMovement(int x, int y) {
 			cameraPitch -= mouseMovedY * cameraSensitivity; // pitch and yaw change according to differences in mouse coordinates
 			cameraYaw += mouseMovedX * cameraSensitivity;
 		}
-		
+
 		if (cameraPitch > 80) cameraPitch = 80; // limiting pitch angle between -80 and 80
 		if (cameraPitch < -80) cameraPitch = -80;
 
 		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw; // limiting yaw to (0, 360) interval
-		
+
 		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch)); // camera moves in a cylindrical coordiate system
 		lookingAtY = yPos + sin(toRadians(cameraPitch));
 		lookingAtZ = zPos + sin(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
@@ -388,12 +388,12 @@ void movement() {
 	{
 		angleY--;
 	}
-	
+
 	if (rightKey)
 	{
 		angleY++;
 	}
-	
+
 	if (upKey)
 	{
 		angleX--;
@@ -440,7 +440,7 @@ void definirTitle() {
 void loadWorldOrthoProj() {
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
-	
+
 	if (h == 0) h = 1;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -504,7 +504,7 @@ void cone(float radius, float height, int nLados) {
 		x = radius * sin(angle);
 		z = radius * cos(angle);
 		glVertex3f(x, 0.0, z);
-		
+
 	}
 	glEnd();
 
@@ -516,7 +516,7 @@ void cone(float radius, float height, int nLados) {
 		x = radius * sin(angle);
 		z = radius * cos(angle);
 		glVertex3f(x, 0.0, z);
-		
+
 	}
 	glEnd();
 
@@ -636,7 +636,7 @@ void comboTubes(float innerRadius, float height, float thickness, int nLados) {
 }
 
 void draw2dBox(int bx, int by, int ux, int uy) {
-	
+
 	glBegin(GL_LINE_LOOP);
 	glVertex2i(bx, by);
 	glVertex2i(ux, by);
@@ -647,7 +647,7 @@ void draw2dBox(int bx, int by, int ux, int uy) {
 }
 
 void draw2dBoxFilled(int bx, int by, int ux, int uy) {
-	
+
 	glBegin(GL_POLYGON);
 	glVertex2i(bx, by);
 	glVertex2i(ux, by);
@@ -723,7 +723,7 @@ void renderCoords() {
 	renderString3D(0.0f, 0.0f, nRange + 1, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
-void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void (*f)(void)) {///////////////////////////////
+void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) {
 	float buttonMidX = buttonWidth / 2;
 	float buttonMidY = buttonHeight / 2;
 
@@ -740,7 +740,7 @@ void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* t
 		lClick ? glColor3f(0.0, 1.0, 0.0) : glColor3f(0.3, 0.3, 0.3);
 		draw2dBoxFilled(leftX, bottomY, rightX, topY);
 		if (lClick) f();
-		
+
 	}
 	else
 	{
@@ -760,7 +760,7 @@ void escapeMenu(int screenX, int screenY) {
 	int buttonWidth = 200;
 	int buttonHeight = 40;
 
-	
+
 
 	/*glColor3f(1.0, 1.0, 1.0);
 	glBegin(GL_LINES);
@@ -774,7 +774,7 @@ void escapeMenu(int screenX, int screenY) {
 	glColor3f(1.0, 1.0, 0.0);
 	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
 
-	
+
 	//todo
 	//	dynamic button generation
 	//	option button
@@ -782,7 +782,7 @@ void escapeMenu(int screenX, int screenY) {
 }
 
 void renderInterface() {
-	
+
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
 	glMatrixMode(GL_PROJECTION); // setting up an orthogonal projection proportional to screen resolution
@@ -793,7 +793,7 @@ void renderInterface() {
 
 	glColor3f(1.0, 0.6, 0.0);
 	char mouseBuffer[32]; // mouse-cursor-following-text buffer
-	
+
 	snprintf(mouseBuffer, sizeof mouseBuffer, "(%d, %d)\n%.1f\n%.1f", mouseX, mouseY, cameraYaw, cameraPitch);
 
 	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_HELVETICA_18, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
@@ -806,7 +806,7 @@ void renderInterface() {
 
 	char buffer[1024];
 	snprintf(buffer, sizeof buffer,
-		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %.0fms   global_speed_multiplier= %f\n"
+		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %.0fms   global_speed_multiplier= %.3f\n"
 		"%s= %.1f%s\n"
 		"X= %.1f°\n"
 		"Y= %.1f°\n"
@@ -821,7 +821,8 @@ void renderInterface() {
 		"animate(z)= %s\n\n"
 		"GL_(F)RONT = %s\n"
 		"GL_(B)ACK = %s\n\n"
-		"GL_(C)ULL_FACE = %s\n\n"
+		"GL_(C)ULL_FACE = %s\n"
+		"GL_DEPTH_(T)EST = %s\n\n"
 		"%s\n"
 		"%s\n"
 		"%s\n"
@@ -849,6 +850,7 @@ void renderInterface() {
 		front ? "GL_LINE" : "GL_FILL",
 		back ? "GL_LINE" : "GL_FILL",
 		cface ? "enable" : "disable",
+		depthTest ? "enable" : "disable",
 		forma == 1 ? "(1) [Cubo]" : "(1) Cubo",
 		forma == 2 ? "(2) [Cone]" : "(2) Cone",
 		forma == 3 ? "(3) [Cilindro]" : "(3) Cilindro",
@@ -859,9 +861,9 @@ void renderInterface() {
 		visionX, visionY, visionZ);
 
 	glColor3f(1.0, 1.0, 0.0);
-	renderString(5, h-29, GLUT_BITMAP_HELVETICA_18, buffer);
+	renderString(5, h - 29, GLUT_BITMAP_HELVETICA_18, buffer);
 
-	glTranslatef(w-70, 80, 0);
+	glTranslatef(w - 70, 80, 0);
 
 	//glRotatef(cameraPitch * +sin(toRadians(cameraYaw)), 1.0f, 0.0f, 0.0f); // camera rotation 
 	//glRotatef(+cameraYaw + 90, 0.0f, 1.0f, 0.0f);
@@ -873,20 +875,13 @@ void renderInterface() {
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	xyzLines3d(.5, 5, 100, 1);
-	glLoadIdentity();
 
-	//glRotatef(-rotationX, 1.0f, 0.0f, 0.0f); // global rotation 
-	//glRotatef(-rotationY, 0.0f, 1.0f, 0.0f);
-	//glRotatef(-rotationZ, 0.0f, 0.0f, 1.0f);
-
-	//xyzLines();
-	
-	// glTranslatef(-10, -10, 0);
+	glTranslatef(-10, -10, 0);
 }
 
 void renderWorld() {
 
-	                  
+
 
 	//if (!projMode) 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
@@ -949,10 +944,8 @@ void renderWorld() {
 
 }
 
-/* Handler for window-repaint event. Called back when the window first appears and
-whenever the window needs to be re-painted. */
 void render() {
-	frame++;
+	frame++; // add a frame for framerate math
 	calculatedFrametime = ftime();
 	calculatedFramerate = fps();
 	definirTitle();
@@ -960,16 +953,16 @@ void render() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
 
 	//3D
-	glEnable(GL_DEPTH_TEST); // preparing 3d world rendering
+	depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST); // preparing 3d world rendering
 	projMode ? loadWorldOrthoProj() : loadWorldPerspProj(); // loading chosen projection
 	glMatrixMode(GL_MODELVIEW); // swapping back to model view matrix
 	glLoadIdentity(); // load identity matrix
 	renderWorld(); // 3d stuff
 
 	// 2D
-	glDisable(GL_DEPTH_TEST); 
+	glDisable(GL_DEPTH_TEST);
 	renderInterface();
-	
+
 	glutSwapBuffers();
 	glutPostRedisplay();
 
@@ -984,7 +977,6 @@ void reshape(GLsizei w, GLsizei h) {
 	// Inicializa o sistema de coordenadas
 }
 
-/* Main function: GLUT runs as a console application starting at main() */
 int main(int argc, char** argv) {
 	glutInit(&argc, argv);            // Initialize GLUT
 	glutInitDisplayMode(GLUT_DOUBLE); // Enable double buffered mode
@@ -1003,7 +995,7 @@ int main(int argc, char** argv) {
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
 	//glutIdleFunc(render);
 	glutReshapeFunc(reshape);         // Register callback handler for window re-size event
-	initGL();   
+	initGL();
 	// Our own OpenGL initialization
 	//glutTimerFunc(8, update, 0);
 	glutMainLoop();                   // Enter the infinite event-processing loop
