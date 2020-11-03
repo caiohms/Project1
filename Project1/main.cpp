@@ -24,8 +24,10 @@ int
 	lClickX, // mouse left click X position updates on left click (no dragging)
 	lClickY, // mouse left click Y position
 	mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
-float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i;
-float versorVisionX, versorVisionY, versorVisionZ, visionMag, cameraPitch = 0.0f, cameraYaw = 270.0f;
+float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i, versorVisionX, versorVisionY, versorVisionZ, visionMag;
+float cameraPitch = 0.0f, 
+		cameraYaw = 270.0f,
+		cameraSensitivity = 0.1; // camera sensitivity
 
 float 
 	lookingAtX = 0,
@@ -40,6 +42,7 @@ float
 	speed = 0.2f;
 
 //bool firstStart = true;
+
 
 //void update(/*int value*/) {
 //	rAngle += 0.2f * animate;
@@ -69,7 +72,7 @@ void renderString(float x, float y, void* font, const char* string) {
 
 	const unsigned char* t = reinterpret_cast<const unsigned char*>(string);
 	glRasterPos2f(x, y);
-	glutBitmapString(font, t);
+	glutBitmapString(font, (unsigned char*)t);
 }
 
 void renderString3D(float x, float y, float z, void* font, const char* string) {
@@ -289,8 +292,6 @@ void mouseMovement(int x, int y) {
 	
 	if (rClick)
 	{
-		float sensitivity = 0.1; // camera sensitivity
-
 		mouseMovedX = x - lastX; // mouse position changes
 		mouseMovedY = y - lastY;
 		lastX = x;
@@ -298,8 +299,8 @@ void mouseMovement(int x, int y) {
 
 		if (!escKey) // blocks camera movement when ESC menu is open
 		{
-			cameraPitch -= mouseMovedY * sensitivity; // pitch and yaw change according to differences in mouse coordinates
-			cameraYaw += mouseMovedX * sensitivity;
+			cameraPitch -= mouseMovedY * cameraSensitivity; // pitch and yaw change according to differences in mouse coordinates
+			cameraYaw += mouseMovedX * cameraSensitivity;
 		}
 		
 		if (cameraPitch > 80) cameraPitch = 80; // limiting pitch angle between -80 and 80
@@ -313,14 +314,17 @@ void mouseMovement(int x, int y) {
 	}
 }
 
-bool mouseOver(int mouseX, int mouseY, int bx, int by, int uy) {
-	if (true)
-	{
-		return true;
-	}
+void normalize2d(float x, float z, float* returnX, float* returnY) {
+	float magnitude = sqrt(pow(x, 2) + pow(z, 2));
+	
+	*returnX = x / magnitude;
+	*returnY = z / magnitude;
+	printf("x=%f,z= %f, %f, %f, %f\n",x,z, magnitude, *returnX, *returnY);
 }
 
 void movement() {
+	float xN, zN;
+
 	if (escKey)
 	{
 		return;
@@ -336,17 +340,6 @@ void movement() {
 		lookingAtZ += versorVisionZ * speed;
 	}
 
-	if (aKey)
-	{
-		xPos += (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		//yPos = versorVisionY * speed;
-		zPos += (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
-
-		lookingAtX += (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		//lookingAtY += versorVisionY * speed;
-		lookingAtZ += (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
-	}
-
 	if (sKey)
 	{
 		xPos -= versorVisionX * speed;
@@ -357,14 +350,26 @@ void movement() {
 		lookingAtZ -= versorVisionZ * speed;
 	}
 
+	if (aKey)
+	{
+		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
+
+		xPos += ( xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		lookingAtX += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+
+		zPos += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+		lookingAtZ += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+	}	
+
 	if (dKey)
 	{
-		xPos -= (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		//yPos -= versorVisionY * speed;
-		zPos -= (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
-		lookingAtX -= (versorVisionX * cos(90 * M_PI / 180) + versorVisionZ * sin(90 * M_PI / 180)) * speed;
-		//lookingAtY -= versorVisionY * speed;
-		lookingAtZ -= (-versorVisionX * sin(90 * M_PI / 180) + versorVisionZ * cos(90 * M_PI / 180)) * speed;
+		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
+
+		xPos -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		lookingAtX -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+
+		zPos -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+		lookingAtZ -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 	}
 
 	if (spaceKey)
@@ -652,7 +657,7 @@ void draw2dBoxFilled(int bx, int by, int ux, int uy) {
 
 }
 
-void xyzLines2d() {
+void xyzLines() {
 	glBegin(GL_LINES);
 	glColor3f(1.0, 0.0, 0.0); // Red - X
 	glVertex3f(0.0, 0.0, 0.0);
@@ -670,6 +675,13 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 	float finalLength = sizeFactor * lengthFactor;
 	float finalThickness = sizeFactor * thicknessFactor;
+
+	//float rotationX = rotX ;
+	//float rotationY = rotY ;
+	//float rotationZ = rotZ ;
+	//glRotatef(rotationX, 1.0f, 0.0f, 0.0f); 
+	//glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
+	//glRotatef(rotationZ, 0.0f, 0.0f, 1.0f);
 
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
 
@@ -695,6 +707,10 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(-90, 1.0f, 0.0f, 0.0f);
+
+	//glRotatef(-rotationX, 1.0f, 0.0f, 0.0f); 
+	//glRotatef(-rotationY, 0.0f, 1.0f, 0.0f);
+	//glRotatef(-rotationZ, 0.0f, 0.0f, 1.0f);
 
 }
 
@@ -734,7 +750,6 @@ void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* t
 	glColor3f(1, 1, 1);
 	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
 }
-
 
 void resumeButton() {
 	escKey = false;
@@ -817,7 +832,10 @@ void renderInterface() {
 		"zPos= %f\n"
 		"lookingAtX= %f\n"
 		"lookingAtY= %f\n"
-		"lookingAtZ= %f\n",
+		"lookingAtZ= %f\n"
+		"versorVisionX= %f\n"
+		"versorVisionY= %f\n"
+		"versorVisionZ= %f\n",
 		projMode ? "glOrtho" : "gluPerspective",
 		(w / h), w, h, calculatedFramerate, calculatedFrametime, speed,
 		projMode ? "nRange" : "angleV",
@@ -845,13 +863,25 @@ void renderInterface() {
 
 	glTranslatef(w-70, 80, 0);
 
+	//glRotatef(cameraPitch * +sin(toRadians(cameraYaw)), 1.0f, 0.0f, 0.0f); // camera rotation 
+	//glRotatef(+cameraYaw + 90, 0.0f, 1.0f, 0.0f);
+	//glRotatef(cameraPitch * -cos(toRadians(cameraYaw)), 0.0f, 0.0f, 1.0f);
+
+
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	xyzLines3d(.5, 5, 100, 1);
+	glLoadIdentity();
+
+	//glRotatef(-rotationX, 1.0f, 0.0f, 0.0f); // global rotation 
+	//glRotatef(-rotationY, 0.0f, 1.0f, 0.0f);
+	//glRotatef(-rotationZ, 0.0f, 0.0f, 1.0f);
+
+	//xyzLines();
 	
-	glTranslatef(-10, -10, 0);
+	// glTranslatef(-10, -10, 0);
 }
 
 void renderWorld() {
@@ -884,7 +914,7 @@ void renderWorld() {
 	versorVisionY = (visionY = (lookingAtY - yPos)) / visionMag;
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
-	xyzLines2d();
+	xyzLines();
 	//xyzLines3d();
 	renderCoords();
 
