@@ -224,6 +224,9 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 53: // 5
 		forma = 5;
 		break;
+	case 54: // 5
+		forma = 6;
+		break;
 	}
 }
 
@@ -317,10 +320,10 @@ void mouseMovement(int x, int y) {
 
 void normalize2d(float x, float z, float* returnX, float* returnY) {
 	float magnitude = sqrt(pow(x, 2) + pow(z, 2));
-	
+
 	*returnX = x / magnitude;
 	*returnY = z / magnitude;
-	printf("x=%f,z= %f, %f, %f, %f\n",x,z, magnitude, *returnX, *returnY);
+	//printf("x=%f,z= %f, %f, %f, %f\n", x, z, magnitude, *returnX, *returnY);
 }
 
 void movement() {
@@ -355,12 +358,12 @@ void movement() {
 	{
 		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
 
-		xPos += ( xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		xPos += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 		lookingAtX += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 
 		zPos += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 		lookingAtZ += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
-	}	
+	}
 
 	if (dKey)
 	{
@@ -457,7 +460,7 @@ void loadWorldPerspProj() {
 	fAspect = w / h;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(angleV, fAspect, .1, 100);
+	gluPerspective(angleV, fAspect, .1, 1000);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -775,7 +778,6 @@ void escapeMenu(int screenX, int screenY) {
 	glColor3f(1.0, 1.0, 0.0);
 	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
 
-
 	//todo
 	//	dynamic button generation
 	//	option button
@@ -829,15 +831,16 @@ void renderInterface() {
 		"%s\n"
 		"%s\n"
 		"%s\n"
+		"%s\n"
 		"xPos= %f\n"
 		"yPos= %f\n"
 		"zPos= %f\n"
 		"lookingAtX= %f\n"
 		"lookingAtY= %f\n"
 		"lookingAtZ= %f\n"
-		"versorVisionX= %f\n"
-		"versorVisionY= %f\n"
-		"versorVisionZ= %f\n",
+		"visionX= %f\n"
+		"visionY= %f\n"
+		"visionZ= %f\n",
 		projMode ? "glOrtho" : "gluPerspective",
 		(w / h), w, h, calculatedFramerate, calculatedFrametime, speed,
 		projMode ? "nRange" : "angleV",
@@ -857,6 +860,7 @@ void renderInterface() {
 		forma == 3 ? "(3) [Cilindro]" : "(3) Cilindro",
 		forma == 4 ? "(4) [Tubo]" : "(4) Tubo",
 		forma == 5 ? "(5) [3 Tubos]" : "(5) 3 Tubos",
+		forma == 6 ? "(6) [Teapot]" : "(6) Teapot",
 		xPos, yPos, zPos,
 		lookingAtX, lookingAtY, lookingAtZ,
 		visionX, visionY, visionZ);
@@ -882,40 +886,69 @@ void renderInterface() {
 
 void renderWorld() {
 
-
-
-	//if (!projMode) 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
 
 	front ? glPolygonMode(GL_FRONT, GL_LINE) : glPolygonMode(GL_FRONT, GL_FILL);
 	back ? glPolygonMode(GL_BACK, GL_LINE) : glPolygonMode(GL_BACK, GL_FILL);
 
-	movement(); // wasd movement function
+	movement(); // movimento WASD
 
 	angleX = (angleX >= 360) ? (angleX -= 360) : (angleX < 0) ? (angleX += 360) : angleX; // 0 <= angleX < 360
 	angleY = (angleY >= 360) ? (angleY -= 360) : (angleY < 0) ? (angleY += 360) : angleY;
 	angleZ = (angleZ >= 360) ? (angleZ -= 360) : (angleZ < 0) ? (angleZ += 360) : angleZ;
 
-	rotX = angleX += 0.5 * animate * animateX; // rotX = arrow key angle * speed factor(0.5) * bool global animation * bool vector-specific animation 
+	rotX = angleX += 0.5 * animate * animateX; // rotX = ângulo modificado pelas setas * speed factor(0.5) * bool animação global * bool animação em eixo específico 
 	rotY = angleY += 0.5 * animate * animateY;
 	rotZ = angleZ += 0.5 * animate * animateZ;
-
-
-	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
-	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
-	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	visionMag = sqrt(pow(visionX, 2) + pow(visionY, 2) + pow(visionZ, 2));
 	versorVisionX = (visionX = (lookingAtX - xPos)) / visionMag;
 	versorVisionY = (visionY = (lookingAtY - yPos)) / visionMag;
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
+	//--------------------------------------------------------------------
+	GLfloat luzAmbiente[4] = { 0.2,0.2,0.2,1.0 };
+	GLfloat luzDifusa[4] = { 0.7,0.7,0.7,1.0 };	   // "cor" 
+	GLfloat luzEspecular[4] = { 1.0, 1.0, 1.0, 1.0 };// "brilho" 
+	GLfloat posicaoLuz[4] = { 0.0, 10.0, 10.0, 1.0 };
+
+	// Capacidade de brilho do material
+	GLfloat especularidade[4] = { 1.0,1.0,1.0,1.0 };
+	GLint especMaterial = 60;
+
+	// Habilita o modelo de colorização de Gouraud
+	glShadeModel(GL_SMOOTH); // glShadeModel(GL_FLAT);
+	// Define a refletância do material 
+	glMaterialfv(GL_FRONT, GL_SPECULAR, especularidade);
+	// Define a concentração do brilho
+	glMateriali(GL_FRONT, GL_SHININESS, especMaterial);
+	// Ativa o uso da luz ambiente 
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, luzAmbiente);
+	// Define os parâmetros da luz de número 0
+	glLightfv(GL_LIGHT0, GL_AMBIENT, luzAmbiente);
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, luzDifusa);
+	glLightfv(GL_LIGHT0, GL_SPECULAR, luzEspecular);
+	glLightfv(GL_LIGHT0, GL_POSITION, posicaoLuz);
+	// Habilita a definição da cor do material a partir da cor corrente
+	glEnable(GL_COLOR_MATERIAL);
+	//Habilita o uso de iluminação
+
+	// Habilita a luz de número 0
+	glEnable(GL_LIGHT0);
+
+	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
+	glColor3f(1, 1, 1);
+	cubo(1);
+	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
+
+	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
+	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
+	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
+
 	xyzLines();
 	//xyzLines3d();
 	renderCoords();
-
-	//glRotatef(-rAngle, 1.0f, 1.0f, 0.0f);
-	//comboTubes(3.0, 25.0, 1.4, 36);
+	glEnable(GL_LIGHTING);
 	switch (forma)
 	{
 	case 1:
@@ -934,14 +967,11 @@ void renderWorld() {
 	case 5:
 		comboTubes(3.0, 25.0, 1.4, 36);
 		break;
+	case 6:
+		glColor3f(0.0f, 0.0f, 1.0f);
+		glutSolidTeapot(15.0f);
+		break;
 	}
-
-	//glTranslatef(5.0, 5.0, 5.0);
-	//cubo(10.0);
-	//glTranslatef(15.0, -5.0, 0.0);
-	//cone(8.0, 15.0, 36);
-	//glTranslatef(-30.0, 0.0, -5.0);
-	//cilindro(5.0, 10.0, 36);
 
 }
 
@@ -956,12 +986,17 @@ void render() {
 	//3D
 	depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST); // preparing 3d world rendering
 	projMode ? loadWorldOrthoProj() : loadWorldPerspProj(); // loading chosen projection
+	if (!projMode)
+	{
+		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	}
 	glMatrixMode(GL_MODELVIEW); // swapping back to model view matrix
 	glLoadIdentity(); // load identity matrix
 	renderWorld(); // 3d stuff
 
 	// 2D
 	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_LIGHTING);
 	renderInterface();
 
 	glutSwapBuffers();
