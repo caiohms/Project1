@@ -12,8 +12,9 @@ GLfloat nRange = 20.0f, angleV = 70.0f, fAspect;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
-bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode, depthTest = true;
+bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode, globalIllumination = false, depthTest = true;
 bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey;
+bool shadeModel = true;
 int forma = 1;
 int frame = 0;
 int
@@ -55,7 +56,7 @@ void initGL() {
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
-	glShadeModel(GL_FLAT);     // Enable smooth shading
+	glShadeModel(GL_SMOOTH);     // Enable smooth shading
 }
 
 float toRadians(float angle) {
@@ -209,6 +210,13 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 112: // p projection mode
 		projMode = projMode ? false : true;
 		break;
+	case 105:
+		globalIllumination = globalIllumination ? false : true;
+		break;
+	case 108:
+		shadeModel = shadeModel ? false : true;
+		shadeModel ? glShadeModel(GL_SMOOTH) : glShadeModel(GL_FLAT);
+		break;
 	case 49: // 1 
 		forma = 1;
 		break;
@@ -226,6 +234,9 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		break;
 	case 54: // 5
 		forma = 6;
+		break;
+	case 55: // 6
+		forma = 7;
 		break;
 	}
 }
@@ -287,7 +298,6 @@ void mouse(int button, int state, int x, int y)
 		// scroll wheel changes nRange when in orthogonal projection and changes camera view angle when in perspective mode
 		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -= 2.0) : (projMode ? nRange += 0.5 : angleV += 1);
 	}
-
 }
 
 void mouseMovement(int x, int y) {
@@ -318,13 +328,65 @@ void mouseMovement(int x, int y) {
 	}
 }
 
-void normalize2d(float x, float z, float* returnX, float* returnY) {
-	float magnitude = sqrt(pow(x, 2) + pow(z, 2));
+void normalize2d(float x, float y, float* returnX, float* returnY) {
+	// funcao antiga mas deixarei para evitar quebrar o que ja esta funcionando
+	float magnitude = sqrt(pow(x, 2) + pow(y, 2));
 
 	*returnX = x / magnitude;
-	*returnY = z / magnitude;
-	//printf("x=%f,z= %f, %f, %f, %f\n", x, z, magnitude, *returnX, *returnY);
+	*returnY = y / magnitude;
+} 
+
+void normalizarVetor(float v[], size_t s, float vOut[]) {
+	float mag = 0;
+	float *nV = new float[s];
+
+	for (size_t i = 0; i < s; i++) 
+		mag += pow(v[i], 2);
+
+	mag = sqrt(mag);
+
+	if (mag == 0) mag = 1;
+
+	for (size_t i = 0; i < s; i++) 
+		nV[i] = v[i] / mag;
+
+	vOut = *&nV;
 }
+
+//void Normaliza(float vector[3]) // normalização do vetor
+//{
+//	float length;
+//	//Cálculo do comprimento do vetor
+//	length = (float)sqrt(pow(vector[0], 2.0) + pow(vector[1], 2.0) + pow(vector[2], 2.0));
+//	// Evita divisão por zero
+//	if (length == 0.0f) length = 1.0f;
+//	// Divide cada elemento pelo comprimento do vetor
+//	vector[0] /= length;
+//	vector[1] /= length;
+//	vector[2] /= length;
+//}
+
+void calcNormal(float v[3][3], float out[3])
+{
+	float v1[3], v2[3];
+	static const int x = 0; static const int y = 1; static const int z = 2;
+
+	v1[x] = v[0][x] - v[1][x];
+	v1[y] = v[0][y] - v[1][y];
+	v1[z] = v[0][z] - v[1][z];
+
+	v2[x] = v[1][x] - v[2][x];
+	v2[y] = v[1][y] - v[2][y];
+	v2[z] = v[1][z] - v[2][z];
+
+	out[x] = v1[y] * v2[z] - v1[z] * v2[y];
+	out[y] = v1[z] * v2[x] - v1[x] * v2[z];
+	out[z] = v1[x] * v2[y] - v1[y] * v2[x];
+	
+	normalizarVetor(out, 3, out);
+
+}
+
 
 void movement() {
 	float xN, zN;
@@ -358,10 +420,10 @@ void movement() {
 	{
 		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
 
-		xPos += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		xPos       += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 		lookingAtX += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 
-		zPos += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+		zPos       += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 		lookingAtZ += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 	}
 
@@ -369,10 +431,10 @@ void movement() {
 	{
 		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
 
-		xPos -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		xPos       -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 		lookingAtX -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 
-		zPos -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+		zPos       -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 		lookingAtZ -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 	}
 
@@ -639,6 +701,53 @@ void comboTubes(float innerRadius, float height, float thickness, int nLados) {
 	glTranslatef(-height / 2, 0.0, 0.0);
 }
 
+void tetraHedro()
+{
+	float normal[3];
+	glBegin(GL_TRIANGLES);
+	{
+		float v[3][3] = { { 0.0f, 25.0f,  0.0f }, // base em XY (face 1)
+						{  25.0f, -25.0f, 0.0f },
+						{ -25.0f, -25.0f, 0.0f } };
+		calcNormal(v, normal);
+		glNormal3fv(normal);
+		glVertex3fv(v[0]);
+		glVertex3fv(v[1]);
+		glVertex3fv(v[2]);
+	}
+	{
+		float v[3][3] = { { -25.0f, -25.0f, 0.0f}, // face 2
+						{    25.0f, -25.0f, 0.0f},
+						{    0.0f, 0.0f,   50.0f} };
+		calcNormal(v, normal);
+		glNormal3fv(normal);
+		glVertex3fv(v[0]);
+		glVertex3fv(v[1]);
+		glVertex3fv(v[2]);
+	}
+	{
+		float v[3][3] = { { 25.0f, -25.0f, 0.0f }, // face 3
+						 {   0.0f,  25.0f, 0.0f },
+						 {   0.0f, 0.0f,  50.0f } };
+		calcNormal(v, normal);
+		glNormal3fv(normal);
+		glVertex3fv(v[0]);
+		glVertex3fv(v[1]);
+		glVertex3fv(v[2]);
+	}
+	{
+		float v[3][3] = { { 0.0f, 25.0f, 0.0f }, // face 4
+						 {-25.0f, -25.0f, 0.0f },
+						 {  0.0f, 0.0f, 50.0f } };
+		calcNormal(v, normal);
+		glNormal3fv(normal);
+		glVertex3fv(v[0]);
+		glVertex3fv(v[1]);
+		glVertex3fv(v[2]);
+	}
+	glEnd();
+}
+
 void draw2dBox(int bx, int by, int ux, int uy) {
 
 	glBegin(GL_LINE_LOOP);
@@ -680,13 +789,6 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	float finalLength = sizeFactor * lengthFactor;
 	float finalThickness = sizeFactor * thicknessFactor;
 
-	//float rotationX = rotX ;
-	//float rotationY = rotY ;
-	//float rotationZ = rotZ ;
-	//glRotatef(rotationX, 1.0f, 0.0f, 0.0f); 
-	//glRotatef(rotationY, 0.0f, 1.0f, 0.0f);
-	//glRotatef(rotationZ, 0.0f, 0.0f, 1.0f);
-
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
 
 	glRotatef(-90, 0.0f, 0.0f, 1.0f);
@@ -711,10 +813,6 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(-90, 1.0f, 0.0f, 0.0f);
-
-	//glRotatef(-rotationX, 1.0f, 0.0f, 0.0f); 
-	//glRotatef(-rotationY, 0.0f, 1.0f, 0.0f);
-	//glRotatef(-rotationZ, 0.0f, 0.0f, 1.0f);
 
 }
 
@@ -774,7 +872,6 @@ void escapeMenu(int screenX, int screenY) {
 	glVertex2i(screenX / 2, screenY);
 	glEnd();*/
 
-
 	glColor3f(1.0, 1.0, 0.0);
 	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
 
@@ -825,7 +922,8 @@ void renderInterface() {
 		"GL_(F)RONT = %s\n"
 		"GL_(B)ACK = %s\n\n"
 		"GL_(C)ULL_FACE = %s\n"
-		"GL_DEPTH_(T)EST = %s\n\n"
+		"GL_DEPTH_(T)EST = %s\n"
+		"glShadeMode(L) = %s\n\n"
 		"%s\n"
 		"%s\n"
 		"%s\n"
@@ -855,6 +953,7 @@ void renderInterface() {
 		back ? "GL_LINE" : "GL_FILL",
 		cface ? "enable" : "disable",
 		depthTest ? "enable" : "disable",
+		shadeModel ? "GL_SMOOTH" : "GL_FLAT",
 		forma == 1 ? "(1) [Cubo]" : "(1) Cubo",
 		forma == 2 ? "(2) [Cone]" : "(2) Cone",
 		forma == 3 ? "(3) [Cilindro]" : "(3) Cilindro",
@@ -907,8 +1006,8 @@ void renderWorld() {
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
 	//--------------------------------------------------------------------
-	GLfloat luzAmbiente[4] = { 0.2,0.2,0.2,1.0 };
-	GLfloat luzDifusa[4] = { 0.7,0.7,0.7,1.0 };	   // "cor" 
+	GLfloat luzAmbiente[4] = { 0.1, 0.1, 0.1, 1.0 };
+	GLfloat luzDifusa[4] = { 0.7, 0.7, 0.7, 1.0 };	   // "cor" 
 	GLfloat luzEspecular[4] = { 1.0, 1.0, 1.0, 1.0 };// "brilho" 
 	GLfloat posicaoLuz[4] = { 0.0, 10.0, 10.0, 1.0 };
 
@@ -917,7 +1016,7 @@ void renderWorld() {
 	GLint especMaterial = 60;
 
 	// Habilita o modelo de colorização de Gouraud
-	glShadeModel(GL_SMOOTH); // glShadeModel(GL_FLAT);
+	//glShadeModel(GL_SMOOTH); // glShadeModel(GL_FLAT);
 	// Define a refletância do material 
 	glMaterialfv(GL_FRONT, GL_SPECULAR, especularidade);
 	// Define a concentração do brilho
@@ -929,17 +1028,25 @@ void renderWorld() {
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, luzDifusa);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, luzEspecular);
 	glLightfv(GL_LIGHT0, GL_POSITION, posicaoLuz);
+
 	// Habilita a definição da cor do material a partir da cor corrente
-	glEnable(GL_COLOR_MATERIAL);
-	//Habilita o uso de iluminação
 
-	// Habilita a luz de número 0
-	glEnable(GL_LIGHT0);
+	if (globalIllumination)
+	{
+		glEnable(GL_COLOR_MATERIAL);
+		glEnable(GL_LIGHT0);
 
-	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
-	glColor3f(1, 1, 1);
-	cubo(1);
-	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
+		glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
+		glColor3f(1, 1, 1);
+		cubo(0.2);
+		glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
+
+	}
+	else
+	{
+		glDisable(GL_COLOR_MATERIAL);
+		glDisable(GL_LIGHT0);
+	}
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
@@ -948,7 +1055,9 @@ void renderWorld() {
 	xyzLines();
 	//xyzLines3d();
 	renderCoords();
-	glEnable(GL_LIGHTING);
+
+	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
+
 	switch (forma)
 	{
 	case 1:
@@ -971,6 +1080,13 @@ void renderWorld() {
 		glColor3f(0.0f, 0.0f, 1.0f);
 		glutSolidTeapot(15.0f);
 		break;
+	case 7:
+		glColor3f(1.0f, 0.0f, 1.0f);
+		tetraHedro();
+		break;
+	/*case 8:
+			glColor3f(1.0f, 0.0f, 1.0f);
+			tetraHedro2();*/
 	}
 
 }
