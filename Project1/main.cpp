@@ -615,11 +615,9 @@ void cone(float radius, float height, int nLados, int divisoes) {
 
 	double x, y, z, x1, y1, z1;
 	float normal[3];
-
-	//glColor3f(1, 0.7, 0);
+	bool firstLoop = true;
 
 	glBegin(GL_TRIANGLE_FAN); //BASE
-
 	glNormal3f(0, -1, 0);
 	glVertex3f(0.0, 0.0, 0.0);
 	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
@@ -630,7 +628,7 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	}
 	glEnd();
 
-	//glColor3f(0.7, 0.9, 0.3);
+	
 
 	glBegin(GL_TRIANGLE_FAN); // LATERAL - BICO
 	float lastX = 0, lastZ = 0;
@@ -646,10 +644,18 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	last(x,y,z) o----o (x,y,z)
 				2 ->  3
 		*/
+		
 
 		x = passoRadius * sin(angle);
 		y = height - passoHeight;
 		z = passoRadius * cos(angle);
+
+		if (firstLoop)
+		{
+			firstLoop = false;
+			lastX = x; lastZ = z;
+			continue;
+		}
 
 		float v[3][3] = {
 			{ lastX, y, lastZ },
@@ -668,18 +674,14 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	}
 	glEnd();
 
-	double xT, yT, zT, xB, yB, zB, lxT = 0, lyT = 0, lzT = 0, lxB = 0, lyB = 0, lzB = 0;
-	bool firstLoop = true;
-
 	glBegin(GL_QUADS); // LATERAL - RESTO
+	double xT, yT, zT, xB, yB, zB, lxT = 0, lyT = 0, lzT = 0, lxB = 0, lyB = 0, lzB = 0;
 
 	for (size_t i = 1; i < divisoes; i++)
 	{
 		firstLoop = true;
 		for (double angle = (2.0 * M_PI); angle >= 0; angle -= (2.0 * M_PI / nLados))
 		{
-			//printf("%d\n", i);
-
 			/* 1    3
 			   o----o (x,y,z)T
 			   |    |
@@ -698,6 +700,12 @@ void cone(float radius, float height, int nLados, int divisoes) {
 
 			if (firstLoop) {
 				firstLoop = false;
+				lxT = xT;
+				lyT = yT;
+				lzT = zT;
+				lxB = xB;
+				lyB = yB;
+				lzB = zB;
 				continue;
 			}
 
@@ -1033,7 +1041,7 @@ void renderInterface() {
 
 	snprintf(mouseBuffer, sizeof mouseBuffer, "(%d, %d)\n%.1f\n%.1f", mouseX, mouseY, cameraYaw, cameraPitch);
 
-	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_HELVETICA_18, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
+	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_8_BY_13, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
 
 	if (escKey) // if ESC key is pressed, only escape menu is loaded and all movement is blocked
 	{
@@ -1043,7 +1051,7 @@ void renderInterface() {
 
 	char buffer[1024];
 	snprintf(buffer, sizeof buffer,
-		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %.0fms   global_speed_multiplier= %.3f\n"
+		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %3.0fms   global_speed_multiplier= %.3f\n"
 		"%s= %.1f%s\n"
 		"X= %.1f°\n"
 		"Y= %.1f°\n"
@@ -1115,7 +1123,7 @@ void renderInterface() {
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
-	//xyzLines3d(.5, 5, 100, 1);
+	xyzLines3d(.5, 5, 100, 1);
 
 	glTranslatef(-10, -10, 0);
 }
@@ -1189,7 +1197,7 @@ void renderWorld() {
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 	
-	//plano(0, 100, 100);
+	//plano(0, 100, 100); // plano fixo
 	
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
@@ -1200,7 +1208,7 @@ void renderWorld() {
 	xyzLines();
 	//xyzLines3d();
 	renderCoords();
-
+	
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 
 	glColor3f(0.3, 0.3, 0.3);
@@ -1214,7 +1222,7 @@ void renderWorld() {
 		break;
 	case 2:
 		glColor3f(1, 0.7, 0);
-		cone(8.0, 15.0, 400, 40);
+		cone(8.0, 15.0, 8, 8);
 		break;
 	case 3:
 		glColor3f(1, 0.7, 0);
