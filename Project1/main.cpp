@@ -25,7 +25,7 @@ rClickY, // mouse right click Y position
 lClickX, // mouse left click X position updates on left click (no dragging)
 lClickY, // mouse left click Y position
 mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
-float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime, i;
+float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
 float versorVisionX, versorVisionY, versorVisionZ, visionMag,
 cameraPitch = 0.0f,
 cameraYaw = 270.0f,
@@ -41,8 +41,6 @@ zPos = 20,
 speed = 0.2f,
 cameraSensitivity = 0.1f;
 
-//bool firstStart = true;
-
 
 //void update(/*int value*/) {
 //	rAngle += 0.2f * animate;
@@ -57,6 +55,7 @@ void initGL() {
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
 	glShadeModel(GL_SMOOTH);     // Enable smooth shading
+	//glEnable(GL_NORMALIZE);
 }
 
 float toRadians(float angle) {
@@ -334,23 +333,26 @@ void normalize2d(float x, float y, float* returnX, float* returnY) {
 
 	*returnX = x / magnitude;
 	*returnY = y / magnitude;
-} 
+}
 
-void normalizarVetor(float v[], size_t s, float vOut[]) {
+void normalizarVetor(float v[], size_t s, float* vOut) {
 	float mag = 0;
-	float *nV = new float[s];
 
-	for (size_t i = 0; i < s; i++) 
+	float* nV = new float[s];
+
+	for (size_t i = 0; i < s; i++)
 		mag += pow(v[i], 2);
 
 	mag = sqrt(mag);
 
 	if (mag == 0) mag = 1;
 
-	for (size_t i = 0; i < s; i++) 
+	for (size_t i = 0; i < s; i++)
 		nV[i] = v[i] / mag;
 
-	vOut = *&nV;
+	memcpy(vOut, nV, sizeof(1.0f) * s);
+
+	delete[] nV;
 }
 
 //void Normaliza(float vector[3]) // normalização do vetor
@@ -368,7 +370,7 @@ void normalizarVetor(float v[], size_t s, float vOut[]) {
 
 void calcNormal(float v[3][3], float out[3])
 {
-	float v1[3], v2[3];
+	float v1[3], v2[3], v3[3];
 	static const int x = 0; static const int y = 1; static const int z = 2;
 
 	v1[x] = v[0][x] - v[1][x];
@@ -379,14 +381,36 @@ void calcNormal(float v[3][3], float out[3])
 	v2[y] = v[1][y] - v[2][y];
 	v2[z] = v[1][z] - v[2][z];
 
-	out[x] = v1[y] * v2[z] - v1[z] * v2[y];
-	out[y] = v1[z] * v2[x] - v1[x] * v2[z];
-	out[z] = v1[x] * v2[y] - v1[y] * v2[x];
-	
-	normalizarVetor(out, 3, out);
+	v3[x] = v1[y] * v2[z] - v1[z] * v2[y];
+	v3[y] = v1[z] * v2[x] - v1[x] * v2[z];
+	v3[z] = v1[x] * v2[y] - v1[y] * v2[x];
 
+	normalizarVetor(v3, 3, out);
+
+	//glBegin(GL_LINES);
+	//glColor3f(1, 1, 0);
+	//glVertex3f(0, 0, 0);
+	//glVertex3f(v1[0], v1[1], v1[2]);
+	//glEnd();
+
+	//glBegin(GL_LINES);
+	//glColor3f(0, 1, 0);
+	//glVertex3f(0, 0, 0);
+	//glVertex3f(v2[0], v2[1], v2[2]);
+	//glEnd();
+
+	//glBegin(GL_LINES);
+	//glColor3f(0, 1, 0);
+	//glVertex3f(0, 0, 0);
+	//glVertex3f(v3[0], v3[1], v3[2]);
+	//glEnd();
+
+	//glBegin(GL_LINES);
+	//glColor3f(0, 1, 0);
+	//glVertex3f(0, 0, 0);
+	//glVertex3f(out[0], out[1], out[2]);
+	//glEnd();
 }
-
 
 void movement() {
 	float xN, zN;
@@ -420,10 +444,10 @@ void movement() {
 	{
 		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
 
-		xPos       += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		xPos += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 		lookingAtX += (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 
-		zPos       += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+		zPos += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 		lookingAtZ += (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 	}
 
@@ -431,10 +455,10 @@ void movement() {
 	{
 		normalize2d(versorVisionX, versorVisionZ, &xN, &zN);
 
-		xPos       -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
+		xPos -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 		lookingAtX -= (xN * cos(90 * M_PI / 180) + zN * sin(90 * M_PI / 180)) * speed;
 
-		zPos       -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
+		zPos -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 		lookingAtZ -= (-xN * sin(90 * M_PI / 180) + zN * cos(90 * M_PI / 180)) * speed;
 	}
 
@@ -527,6 +551,30 @@ void loadWorldPerspProj() {
 	glLoadIdentity();
 }
 
+void plano(float y, float size, int divisoes) {
+	float xmin = -size;
+	float xmax = size;
+	float zmin = -size;
+	float zmax = size;
+	float passoX = (xmax - xmin) / divisoes;
+	float passoZ = (zmax - zmin) / divisoes;
+
+	glBegin(GL_QUADS);
+	glNormal3f(0, 1, 0);
+
+	for (int i = 0; i < divisoes; i++)
+	{
+		for (int j = 0; j < divisoes; j++)
+		{			
+			glVertex3f(xmin + passoX * i, y, zmin + passoZ * j);
+			glVertex3f(xmin + passoX * i, y, zmin + passoZ * (j+1));
+			glVertex3f(xmin + passoX * (i+1), y, zmin + passoZ * (j+1));
+			glVertex3f(xmin + passoX * (i+1), y, zmin + passoZ * j);
+		}
+	}
+	glEnd();
+}
+
 void cubo(float a) {
 	//glColor3f(.5, 0.2, 0.1);
 	glBegin(GL_TRIANGLE_STRIP);
@@ -559,33 +607,124 @@ void cubo(float a) {
 	glEnd();
 }
 
-void cone(float radius, float height, int nLados) {
+void cone(float radius, float height, int nLados, int divisoes) {
+	if (!divisoes) return;
 
-	double x, z;
+	double passoRadius = radius / divisoes;
+	double passoHeight = height / divisoes;
+
+	double x, y, z, x1, y1, z1;
+	float normal[3];
+
 	//glColor3f(1, 0.7, 0);
+
 	glBegin(GL_TRIANGLE_FAN); //BASE
-	glVertex3f(0.0, 0.0, 0.0);// centro
+
+	glNormal3f(0, -1, 0);
+	glVertex3f(0.0, 0.0, 0.0);
 	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
 		z = radius * cos(angle);
 		glVertex3f(x, 0.0, z);
-
 	}
 	glEnd();
 
 	//glColor3f(0.7, 0.9, 0.3);
-	glBegin(GL_TRIANGLE_FAN); // LATERAL
-	glVertex3f(0.0, height, 0.0); // centro
+
+	glBegin(GL_TRIANGLE_FAN); // LATERAL - BICO
+	float lastX = 0, lastZ = 0;
+
 	for (double angle = 0.0; angle <= (2.0 * M_PI); angle += (2.0 * M_PI / nLados))
 	{
-		x = radius * sin(angle);
-		z = radius * cos(angle);
-		glVertex3f(x, 0.0, z);
+		/*		1
+				o (0,height,0)
+				|\
+			  | | \
+			  v |  \    antihorário
+				|   \
+	last(x,y,z) o----o (x,y,z)
+				2 ->  3
+		*/
 
+		x = passoRadius * sin(angle);
+		y = height - passoHeight;
+		z = passoRadius * cos(angle);
+
+		float v[3][3] = {
+			{ lastX, y, lastZ },
+			{ x, y, z },
+			{ 0, height, 0 }
+		};
+
+		calcNormal(v, normal);
+		glNormal3fv(normal);
+
+		glVertex3f(0.0, height, 0.0);
+		glVertex3f(lastX, y, lastZ);
+		glVertex3f(x, y, z);
+
+		lastX = x; lastZ = z;
 	}
 	glEnd();
 
+	double xT, yT, zT, xB, yB, zB, lxT = 0, lyT = 0, lzT = 0, lxB = 0, lyB = 0, lzB = 0;
+	bool firstLoop = true;
+
+	glBegin(GL_QUADS); // LATERAL - RESTO
+
+	for (size_t i = 1; i < divisoes; i++)
+	{
+		firstLoop = true;
+		for (double angle = (2.0 * M_PI); angle >= 0; angle -= (2.0 * M_PI / nLados))
+		{
+			//printf("%d\n", i);
+
+			/* 1    3
+			   o----o (x,y,z)T
+			   |    |
+			 v |    | ^
+			   |    |
+			   o----o (x,y,z)B
+			   2  > 4
+			*/
+
+			xT = passoRadius * i * sin(angle);
+			yT = height - (passoHeight * i);
+			zT = passoRadius * i * cos(angle);
+			xB = passoRadius * (i + 1) * sin(angle);
+			yB = height - passoHeight * (i + 1);
+			zB = passoRadius * (i + 1) * cos(angle);
+
+			if (firstLoop) {
+				firstLoop = false;
+				continue;
+			}
+
+			float v[3][3] = {
+				{ xT, yT, zT },
+				{ lxB, lyB, lzB },
+				{ lxT, lyT, lzT },
+			};
+
+			calcNormal(v, normal);
+			glNormal3fv(normal);
+
+			glVertex3f(xT, yT, zT);
+			glVertex3f(xB, yB, zB);
+			glVertex3f(lxB, lyB, lzB);
+			glVertex3f(lxT, lyT, lzT);
+
+			lxT = xT;
+			lyT = yT;
+			lzT = zT;
+			lxB = xB;
+			lyB = yB;
+			lzB = zB;
+		}
+	}
+
+	glEnd();
 }
 
 void cilindro(float radius, float height, int nLados) {
@@ -794,7 +933,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glRotatef(-90, 0.0f, 0.0f, 1.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(90, 0.0f, 0.0f, 1.0f);
 
@@ -802,7 +941,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 
 	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
@@ -810,7 +949,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glRotatef(90, 1.0f, 0.0f, 0.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(-90, 1.0f, 0.0f, 0.0f);
 
@@ -818,11 +957,11 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 void renderCoords() {
 	glColor3f(1.0, 0.0, 0.0);
-	renderString3D(nRange + 1, 0.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
+	renderString3D(nRange, 1.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
 	glColor3f(0.0, 1.0, 0.0);
 	renderString3D(0.0f, nRange + 1, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
 	glColor3f(0.0, 0.0, 1.0);
-	renderString3D(0.0f, 0.0f, nRange + 1, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
+	renderString3D(0.0f, 1.0f, nRange, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
 void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) {
@@ -861,8 +1000,6 @@ void escapeMenu(int screenX, int screenY) {
 
 	int buttonWidth = 200;
 	int buttonHeight = 40;
-
-
 
 	/*glColor3f(1.0, 1.0, 1.0);
 	glBegin(GL_LINES);
@@ -965,7 +1102,7 @@ void renderInterface() {
 		visionX, visionY, visionZ);
 
 	glColor3f(1.0, 1.0, 0.0);
-	renderString(5, h - 29, GLUT_BITMAP_HELVETICA_18, buffer);
+	renderString(5, h - 29, GLUT_BITMAP_9_BY_15, buffer);
 
 	glTranslatef(w - 70, 80, 0);
 
@@ -978,7 +1115,7 @@ void renderInterface() {
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
-	xyzLines3d(.5, 5, 100, 1);
+	//xyzLines3d(.5, 5, 100, 1);
 
 	glTranslatef(-10, -10, 0);
 }
@@ -1006,10 +1143,11 @@ void renderWorld() {
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
 	//--------------------------------------------------------------------
-	GLfloat luzAmbiente[4] = { 0.1, 0.1, 0.1, 1.0 };
-	GLfloat luzDifusa[4] = { 0.7, 0.7, 0.7, 1.0 };	   // "cor" 
+	GLfloat luzAmbiente[4] = { 0.05, 0.05, 0.05, 1.0 };
+	GLfloat luzDifusa[4] = { 0.9, 0.9, 0.9, 1.0 };	   // "cor" 
 	GLfloat luzEspecular[4] = { 1.0, 1.0, 1.0, 1.0 };// "brilho" 
-	GLfloat posicaoLuz[4] = { 0.0, 10.0, 10.0, 1.0 };
+
+	GLfloat posicaoLuz[4] = { 0.0, 18.0, 0.0, 1.0 };
 
 	// Capacidade de brilho do material
 	GLfloat especularidade[4] = { 1.0,1.0,1.0,1.0 };
@@ -1047,16 +1185,26 @@ void renderWorld() {
 		glDisable(GL_COLOR_MATERIAL);
 		glDisable(GL_LIGHT0);
 	}
+	glColor3f(0.1, 0.1, 0.1);
+
+	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
+	
+	//plano(0, 100, 100);
+	
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
+	glDisable(GL_LIGHTING);
 	xyzLines();
 	//xyzLines3d();
 	renderCoords();
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
+
+	glColor3f(0.3, 0.3, 0.3);
+	plano(0, 100, 300);
 
 	switch (forma)
 	{
@@ -1065,15 +1213,19 @@ void renderWorld() {
 		cubo(10.0);
 		break;
 	case 2:
-		cone(8.0, 15.0, 36);
+		glColor3f(1, 0.7, 0);
+		cone(8.0, 15.0, 400, 40);
 		break;
 	case 3:
-		cilindro(5.0, 10.0, 36);
+		glColor3f(1, 0.7, 0);
+		cilindro(5.0, 1.0, 36);
 		break;
 	case 4:
+		glColor3f(1, 0.7, 0);
 		tube(3.0, 10.0, 1.0, 36);
 		break;
 	case 5:
+		glColor3f(1, 0.7, 0);
 		comboTubes(3.0, 25.0, 1.4, 36);
 		break;
 	case 6:
@@ -1084,9 +1236,9 @@ void renderWorld() {
 		glColor3f(1.0f, 0.0f, 1.0f);
 		tetraHedro();
 		break;
-	/*case 8:
-			glColor3f(1.0f, 0.0f, 1.0f);
-			tetraHedro2();*/
+		/*case 8:
+				glColor3f(1.0f, 0.0f, 1.0f);
+				tetraHedro2();*/
 	}
 
 }
