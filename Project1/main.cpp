@@ -18,28 +18,30 @@ bool shadeModel = true;
 int forma = 1;
 int frame = 0;
 int
-mouseX, // live mouse position X axis updated every frame
-mouseY, // live mouse position Y axis
-rClickX, // mouse right click X position updates on right click and/or right click dragging
-rClickY, // mouse right click Y position
-lClickX, // mouse left click X position updates on left click (no dragging)
-lClickY, // mouse left click Y position
-mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
+	mouseX, // live mouse position X axis updated every frame
+	mouseY, // live mouse position Y axis
+	rClickX, // mouse right click X position updates on right click and/or right click dragging
+	rClickY, // mouse right click Y position
+	lClickX, // mouse left click X position updates on left click (no dragging)
+	lClickY, // mouse left click Y position
+	mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
 float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
 float versorVisionX, versorVisionY, versorVisionZ, visionMag,
-cameraPitch = 0.0f,
-cameraYaw = 270.0f,
-lookingAtX = 0,
-lookingAtY = 0,
-lookingAtZ = 0,
-visionX = 0,
-visionY = 0,
-visionZ = 0,
-xPos = 0,
-yPos = 0,
-zPos = 20,
-speed = 0.2f,
-cameraSensitivity = 0.1f;
+	cameraPitch = 0.0f,
+	cameraYaw = 270.0f,
+	lookingAtX = 0,
+	lookingAtY = 0,
+	lookingAtZ = 0,
+	visionX = 0,
+	visionY = 0,
+	visionZ = 0,
+	xPos = 0,
+	yPos = 0,
+	zPos = 20,
+	speed = 0.2f,
+	cameraSensitivity = 0.1f;
+
+float matrizModelview[16];
 
 
 //void update(/*int value*/) {
@@ -628,8 +630,6 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	}
 	glEnd();
 
-	
-
 	glBegin(GL_TRIANGLE_FAN); // LATERAL - BICO
 	float lastX = 0, lastZ = 0;
 
@@ -644,7 +644,6 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	last(x,y,z) o----o (x,y,z)
 				2 ->  3
 		*/
-		
 
 		x = passoRadius * sin(angle);
 		y = height - passoHeight;
@@ -1037,9 +1036,11 @@ void renderInterface() {
 	glLoadIdentity();
 
 	glColor3f(1.0, 0.6, 0.0);
-	char mouseBuffer[32]; // mouse-cursor-following-text buffer
+	char mouseBuffer[50]; // mouse-cursor-following-text buffer
 
-	snprintf(mouseBuffer, sizeof mouseBuffer, "(%d, %d)\n%.1f\n%.1f", mouseX, mouseY, cameraYaw, cameraPitch);
+	snprintf(mouseBuffer, sizeof mouseBuffer, 
+		"(%d, %d)\nYaw = %.1f\nPitch = %.1f",
+		mouseX, mouseY, cameraYaw, cameraPitch);
 
 	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_8_BY_13, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
 
@@ -1112,18 +1113,39 @@ void renderInterface() {
 	glColor3f(1.0, 1.0, 0.0);
 	renderString(5, h - 29, GLUT_BITMAP_9_BY_15, buffer);
 
-	glTranslatef(w - 70, 80, 0);
+	//matrizModelview[0], matrizModelview[1], matrizModelview[2], matrizModelview[3],
+	//matrizModelview[4], matrizModelview[5], matrizModelview[6], matrizModelview[7],
+	//matrizModelview[8], matrizModelview[9], matrizModelview[10], matrizModelview[11],
+	//matrizModelview[12], matrizModelview[13], matrizModelview[14], matrizModelview[15]
 
-	//glRotatef(cameraPitch * +sin(toRadians(cameraYaw)), 1.0f, 0.0f, 0.0f); // camera rotation 
-	//glRotatef(+cameraYaw + 90, 0.0f, 1.0f, 0.0f);
-	//glRotatef(cameraPitch * -cos(toRadians(cameraYaw)), 0.0f, 0.0f, 1.0f);
+	snprintf(buffer, sizeof buffer,
+		"GL_MODELVIEW_MATRIX \n"
+		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
+		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
+		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
+		"| %2.2f | %2.2f | %2.2f | %2.2f | \n",
+		matrizModelview[0], matrizModelview[1], matrizModelview[2], matrizModelview[3],
+		matrizModelview[4], matrizModelview[5], matrizModelview[6], matrizModelview[7],
+		matrizModelview[8], matrizModelview[9], matrizModelview[10], matrizModelview[11],
+		matrizModelview[12], matrizModelview[13], matrizModelview[14], matrizModelview[15]
+	);
 
+	renderString(w - 300, h - 29, GLUT_BITMAP_9_BY_15, buffer);
 
-	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
-	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
-	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
-
+	glPushMatrix(); // Mini camera XYZ axis
+	glTranslatef(w - 70, 70, 0); // Posicionamento
+	glRotatef(-cameraPitch, 1.0f, 0.0f, 0.0f);// Camera rotation 
+	glRotatef(cameraYaw + 90, 0.0f, 1.0f, 0.0f);
 	xyzLines3d(.5, 5, 100, 1);
+	glPopMatrix();
+
+	//float xRotationFromModelview = toDegrees(acos(matrizModelview[0]));
+	//float yRotationFromModelview = toDegrees(acos(matrizModelview[5]));
+	//float zRotationFromModelview = toDegrees(acos(matrizModelview[10]));
+	//printf("%f\n%f\n%f\n\n", xRotationFromModelview, yRotationFromModelview, zRotationFromModelview);
+		
+	
+	
 
 	glTranslatef(-10, -10, 0);
 }
@@ -1131,6 +1153,19 @@ void renderInterface() {
 void renderWorld() {
 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
+
+	glGetFloatv(GL_MODELVIEW_MATRIX, matrizModelview);
+
+	//printf(
+	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n"
+	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n"
+	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n"
+	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n\n",
+	//	matrizModelview[0], matrizModelview[1], matrizModelview[2], matrizModelview[3],
+	//	matrizModelview[4], matrizModelview[5], matrizModelview[6], matrizModelview[7],
+	//	matrizModelview[8], matrizModelview[9], matrizModelview[10], matrizModelview[11],
+	//	matrizModelview[12], matrizModelview[13], matrizModelview[14], matrizModelview[15]
+	//);
 
 	front ? glPolygonMode(GL_FRONT, GL_LINE) : glPolygonMode(GL_FRONT, GL_FILL);
 	back ? glPolygonMode(GL_BACK, GL_LINE) : glPolygonMode(GL_BACK, GL_FILL);
@@ -1193,12 +1228,11 @@ void renderWorld() {
 		glDisable(GL_COLOR_MATERIAL);
 		glDisable(GL_LIGHT0);
 	}
-	glColor3f(0.1, 0.1, 0.1);
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
-	
-	//plano(0, 100, 100); // plano fixo
-	
+
+	glColor3f(0.3, 0.3, 0.3);
+	plano(-20, 100, 300); // plano fixo
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
@@ -1210,9 +1244,6 @@ void renderWorld() {
 	renderCoords();
 	
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
-
-	glColor3f(0.3, 0.3, 0.3);
-	plano(0, 100, 300);
 
 	switch (forma)
 	{
