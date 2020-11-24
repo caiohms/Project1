@@ -3,10 +3,51 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <string>
+#include <fstream>		    // File library
+#include <iostream>
+#include <vector>
+using namespace std;
+
+class ObjetoOpenGL
+{
+public:
+	int tipo;
+	int x, y, z;
+	float r, g, b;
+	float p1, p2, p3;
+
+	ObjetoOpenGL(int Tipo, int X, int Y, int Z, float R, float G, float B) {
+		tipo = Tipo;
+		x = X;
+		y = Y;
+		z = Z;
+		r = R;
+		g = G;
+		b = B;
+	}
+
+	void distribuirParametros(float parametros[3]) {
+		p1 = parametros[0];
+		p2 = parametros[1];
+		p3 = parametros[2];
+	}
+};
+
+class ObjetoCompostoOpenGL
+{
+public:
+	char nome[50];
+	std::vector<ObjetoOpenGL> partes;
+
+	ObjetoCompostoOpenGL(char Nome[50]) {
+		memcpy(nome, Nome, sizeof(char)*50);
+
+	}
+};
 
 char title[64] = "OpenGL-PUCPR - Formas geométricas";
-int RESOLUTION_STARTING_WIDTH = 1600;
-int RESOLUTION_STARTING_HEIGHT = 900;
+int RESOLUTION_INITIAL_WIDTH = 1600;
+int RESOLUTION_INITIAL_HEIGHT = 900;
 
 GLfloat nRange = 20.0f, angleV = 70.0f, fAspect;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
@@ -18,31 +59,77 @@ bool shadeModel = true;
 int forma = 1;
 int frame = 0;
 int
-	mouseX, // live mouse position X axis updated every frame
-	mouseY, // live mouse position Y axis
-	rClickX, // mouse right click X position updates on right click and/or right click dragging
-	rClickY, // mouse right click Y position
-	lClickX, // mouse left click X position updates on left click (no dragging)
-	lClickY, // mouse left click Y position
-	mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
+mouseX, // live mouse position X axis updated every frame
+mouseY, // live mouse position Y axis
+rClickX, // mouse right click X position updates on right click and/or right click dragging
+rClickY, // mouse right click Y position
+lClickX, // mouse left click X position updates on left click (no dragging)
+lClickY, // mouse left click Y position
+mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
 float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
 float versorVisionX, versorVisionY, versorVisionZ, visionMag,
-	cameraPitch = 0.0f,
-	cameraYaw = 270.0f,
-	lookingAtX = 0,
-	lookingAtY = 0,
-	lookingAtZ = 0,
-	visionX = 0,
-	visionY = 0,
-	visionZ = 0,
-	xPos = 0,
-	yPos = 0,
-	zPos = 20,
-	speed = 0.2f,
-	cameraSensitivity = 0.1f;
+cameraPitch = 0.0f,
+cameraYaw = 270.0f,
+lookingAtX = 0,
+lookingAtY = 0,
+lookingAtZ = 0,
+visionX = 0,
+visionY = 0,
+visionZ = 0,
+xPos = 0,
+yPos = 0,
+zPos = 20,
+speed = 0.2f,
+cameraSensitivity = 0.1f,
+matrizModelview[16];
 
-float matrizModelview[16];
+std::vector<ObjetoCompostoOpenGL> Objetos;
 
+void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
+{	
+	/*	Formato arquivo:
+	numObjects
+	nome
+	numPartes
+	tipo x y z r g b numParametros
+	parametro[0]
+	parametro[...]
+	parametro[numParametros] // Ultimo item do objeto individual
+	nome
+	...
+	*/
+	int numObjects, numPartes;
+	char nome[50];
+	int tipo, x, y, z, numParametros;
+	float r, g, b, parametros[3];  // cores dos objetos
+
+	fstream inStream;
+	inStream.open(fileName, ios::in); // abre o arquivo
+	if (inStream.fail()) return;      //falha na abertura do arquivo
+	cout << "Abertura do arquivo com sucesso ..." << endl;
+	inStream >> numObjects;			  // le primeira linha do arquivo, numero de objetos 
+	cout << numObjects << " Objetos na cena ..." << endl;
+
+	for (int i = 1; i <= numObjects; i++) { // leitura das demais linhas, ID dos objetos, posicao e cor
+		inStream >> nome; // Recebe nome
+		ObjetoCompostoOpenGL novoObjeto(nome); // Cria objeto composto com nome recebido
+		inStream >> numPartes; // Recebe numero de partes que compoem o objeto
+		for (int j = 1; j <= numPartes; j++) // Para cada parte
+		{
+			inStream >> tipo >> x >> y >> z >> r >> g >> b >> numParametros; // Lê um objeto open gl (uma parte)
+			ObjetoOpenGL parte(tipo, x, y, z, r, g, b); // Cria a parte
+			for (int k = 0; k < numParametros; k++) // Para cada parametro adicional, le uma linha nova com cada parametro
+			{
+				inStream >> parametros[k];
+			}
+			parte.distribuirParametros(parametros); // distribui os parametros lidos para as variaveis dentro do objeto 'parte'
+			novoObjeto.partes.push_back(parte); // mexendo na variável pública para fins de teste
+		}
+		Objetos.push_back(novoObjeto);
+	}
+
+	inStream.close();				 // fecha o arquivo
+}
 
 //void update(/*int value*/) {
 //	rAngle += 0.2f * animate;
@@ -52,6 +139,7 @@ float matrizModelview[16];
 //}
 
 void initGL() {
+	
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
@@ -1143,11 +1231,8 @@ void renderInterface() {
 	//float yRotationFromModelview = toDegrees(acos(matrizModelview[5]));
 	//float zRotationFromModelview = toDegrees(acos(matrizModelview[10]));
 	//printf("%f\n%f\n%f\n\n", xRotationFromModelview, yRotationFromModelview, zRotationFromModelview);
-		
-	
-	
 
-	glTranslatef(-10, -10, 0);
+	//glTranslatef(-10, -10, 0);
 }
 
 void renderWorld() {
@@ -1253,7 +1338,7 @@ void renderWorld() {
 		break;
 	case 2:
 		glColor3f(1, 0.7, 0);
-		cone(8.0, 15.0, 8, 8);
+		cone(8.0, 15.0, 360, 80);
 		break;
 	case 3:
 		glColor3f(1, 0.7, 0);
@@ -1321,9 +1406,11 @@ void reshape(GLsizei w, GLsizei h) {
 }
 
 int main(int argc, char** argv) {
+	DisplayFileRead("df.txt");              // se estiver aqui, le somente uma vez
+
 	glutInit(&argc, argv);            // Initialize GLUT
 	glutInitDisplayMode(GLUT_DOUBLE); // Enable double buffered mode
-	glutInitWindowSize(RESOLUTION_STARTING_WIDTH, RESOLUTION_STARTING_HEIGHT);     // Set the window's initial width & height
+	glutInitWindowSize(RESOLUTION_INITIAL_WIDTH, RESOLUTION_INITIAL_HEIGHT);     // Set the window's initial width & height
 	glutInitWindowPosition(100, 100);   // Position the window's initial top-left corner
 	glutCreateWindow("");          // Create window with the given title
 	glutDisplayFunc(render);          // Register callback handler for window re-paint event

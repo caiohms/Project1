@@ -1,0 +1,21 @@
+2
+cuboDoido
+2
+1 0 10 0 0.9 0.5 0.5 1
+15
+1 0 15 0 0.9 0.5 0.1 1
+10
+cuboDoidaum
+1
+1 0 10 0 0.9 0.5 0.5 1
+15
+
+
+numObjects
+nome
+numPartes
+tipo x y z r g b numParametros
+parametro[0]
+parametro[...]
+parametro[numParametros] // Ultimo item do objeto individual
+nome
