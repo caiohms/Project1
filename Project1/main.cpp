@@ -14,9 +14,9 @@ public:
 	int tipo;
 	int x, y, z;
 	float r, g, b;
-	float p1, p2, p3;
+	std::vector<float> params;
 
-	ObjetoOpenGL(int Tipo, int X, int Y, int Z, float R, float G, float B) {
+	ObjetoOpenGL(int Tipo, int X, int Y, int Z, float R, float G, float B, std::vector<float> Parametros) {
 		tipo = Tipo;
 		x = X;
 		y = Y;
@@ -24,13 +24,14 @@ public:
 		r = R;
 		g = G;
 		b = B;
+		params = Parametros;
 	}
 
-	void distribuirParametros(float parametros[3]) {
+	/*void distribuirParametros(float parametros[3]) {
 		p1 = parametros[0];
 		p2 = parametros[1];
 		p3 = parametros[2];
-	}
+	}*/
 };
 
 class ObjetoCompostoOpenGL
@@ -40,7 +41,7 @@ public:
 	std::vector<ObjetoOpenGL> partes;
 
 	ObjetoCompostoOpenGL(char Nome[50]) {
-		memcpy(nome, Nome, sizeof(char)*50);
+		memcpy(nome, Nome, sizeof(char) * 50);
 
 	}
 };
@@ -49,12 +50,12 @@ char title[64] = "OpenGL-PUCPR - Formas geométricas";
 int RESOLUTION_INITIAL_WIDTH = 1600;
 int RESOLUTION_INITIAL_HEIGHT = 900;
 
-GLfloat nRange = 20.0f, angleV = 70.0f, fAspect;
+GLfloat nRange = 120.0f, angleV = 70.0f, fAspect;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode, globalIllumination = false, depthTest = true;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey;
+bool wKey, aKey, sKey, dKey, spaceKey, eKey, mKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey;
 bool shadeModel = true;
 int forma = 1;
 int frame = 0;
@@ -86,13 +87,13 @@ matrizModelview[16];
 std::vector<ObjetoCompostoOpenGL> Objetos;
 
 void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
-{	
+{
 	/*	Formato arquivo:
 	numObjects
 	nome
 	numPartes
 	tipo x y z r g b numParametros
-	parametro[0]
+	parametro[0]             // Por exemplo aresta do cubo, raio/comprimento de um cilindro
 	parametro[...]
 	parametro[numParametros] // Ultimo item do objeto individual
 	nome
@@ -101,7 +102,8 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 	int numObjects, numPartes;
 	char nome[50];
 	int tipo, x, y, z, numParametros;
-	float r, g, b, parametros[3];  // cores dos objetos
+	float r, g, b;
+	std::vector<float> parametros;  // cores dos objetos
 
 	fstream inStream;
 	inStream.open(fileName, ios::in); // abre o arquivo
@@ -116,18 +118,20 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 		inStream >> numPartes; // Recebe numero de partes que compoem o objeto
 		for (int j = 1; j <= numPartes; j++) // Para cada parte
 		{
+			parametros.clear();
 			inStream >> tipo >> x >> y >> z >> r >> g >> b >> numParametros; // Lê um objeto open gl (uma parte)
-			ObjetoOpenGL parte(tipo, x, y, z, r, g, b); // Cria a parte
 			for (int k = 0; k < numParametros; k++) // Para cada parametro adicional, le uma linha nova com cada parametro
 			{
-				inStream >> parametros[k];
+				float p;
+				inStream >> p;
+				parametros.push_back(p);
 			}
-			parte.distribuirParametros(parametros); // distribui os parametros lidos para as variaveis dentro do objeto 'parte'
+			ObjetoOpenGL parte(tipo, x, y, z, r, g, b, parametros); // Cria a parte
+			//parte.distribuirParametros(parametros); // distribui os parametros lidos para as variaveis dentro do objeto 'parte'
 			novoObjeto.partes.push_back(parte); // mexendo na variável pública para fins de teste
 		}
 		Objetos.push_back(novoObjeto);
 	}
-
 	inStream.close();				 // fecha o arquivo
 }
 
@@ -139,7 +143,7 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 //}
 
 void initGL() {
-	
+
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
@@ -282,6 +286,9 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 101: // e
 		eKey = true;
 		break;
+	case 109: // m
+		mKey = mKey ? false : true;
+		break;
 	case 102: // f front
 		front = front ? false : true;
 		break;
@@ -321,11 +328,20 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 53: // 5
 		forma = 5;
 		break;
-	case 54: // 5
+	case 54: // 6
 		forma = 6;
 		break;
-	case 55: // 6
+	case 55: // 7
 		forma = 7;
+		break;
+	case 56: // 8
+		forma = 8;
+		break;
+	case 57: // 9
+		forma = 9;
+		break;
+	case 48: // 0
+		forma = 10;
 		break;
 	}
 }
@@ -655,11 +671,11 @@ void plano(float y, float size, int divisoes) {
 	for (int i = 0; i < divisoes; i++)
 	{
 		for (int j = 0; j < divisoes; j++)
-		{			
+		{
 			glVertex3f(xmin + passoX * i, y, zmin + passoZ * j);
-			glVertex3f(xmin + passoX * i, y, zmin + passoZ * (j+1));
-			glVertex3f(xmin + passoX * (i+1), y, zmin + passoZ * (j+1));
-			glVertex3f(xmin + passoX * (i+1), y, zmin + passoZ * j);
+			glVertex3f(xmin + passoX * i, y, zmin + passoZ * (j + 1));
+			glVertex3f(xmin + passoX * (i + 1), y, zmin + passoZ * (j + 1));
+			glVertex3f(xmin + passoX * (i + 1), y, zmin + passoZ * j);
 		}
 	}
 	glEnd();
@@ -1008,13 +1024,13 @@ void xyzLines() {
 	glBegin(GL_LINES);
 	glColor3f(1.0, 0.0, 0.0); // Red - X
 	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(+nRange, 0.0, 0.0);
+	glVertex3f(20.0, 0.0, 0.0);
 	glColor3f(0.0, 1.0, 0.0); // Green - Y
 	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(0.0, +nRange, 0.0);
+	glVertex3f(0.0, 20.0, 0.0);
 	glColor3f(0.0, 0.0, 1.0); // Blue - Z
 	glVertex3f(0.0, 0.0, 0.0);
-	glVertex3f(0.0, 0.0, +nRange);
+	glVertex3f(0.0, 0.0, 20.0);
 	glEnd();
 }
 
@@ -1052,11 +1068,11 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 void renderCoords() {
 	glColor3f(1.0, 0.0, 0.0);
-	renderString3D(nRange, 1.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
+	renderString3D(20, 1.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
 	glColor3f(0.0, 1.0, 0.0);
-	renderString3D(0.0f, nRange + 1, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
+	renderString3D(0.0f, 20 + 1, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "Y");
 	glColor3f(0.0, 0.0, 1.0);
-	renderString3D(0.0f, 1.0f, nRange, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
+	renderString3D(0.0f, 1.0f, 20, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
 void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) {
@@ -1126,7 +1142,7 @@ void renderInterface() {
 	glColor3f(1.0, 0.6, 0.0);
 	char mouseBuffer[50]; // mouse-cursor-following-text buffer
 
-	snprintf(mouseBuffer, sizeof mouseBuffer, 
+	snprintf(mouseBuffer, sizeof mouseBuffer,
 		"(%d, %d)\nYaw = %.1f\nPitch = %.1f",
 		mouseX, mouseY, cameraYaw, cameraPitch);
 
@@ -1158,12 +1174,6 @@ void renderInterface() {
 		"GL_(C)ULL_FACE = %s\n"
 		"GL_DEPTH_(T)EST = %s\n"
 		"glShadeMode(L) = %s\n\n"
-		"%s\n"
-		"%s\n"
-		"%s\n"
-		"%s\n"
-		"%s\n"
-		"%s\n"
 		"xPos= %f\n"
 		"yPos= %f\n"
 		"zPos= %f\n"
@@ -1188,12 +1198,6 @@ void renderInterface() {
 		cface ? "enable" : "disable",
 		depthTest ? "enable" : "disable",
 		shadeModel ? "GL_SMOOTH" : "GL_FLAT",
-		forma == 1 ? "(1) [Cubo]" : "(1) Cubo",
-		forma == 2 ? "(2) [Cone]" : "(2) Cone",
-		forma == 3 ? "(3) [Cilindro]" : "(3) Cilindro",
-		forma == 4 ? "(4) [Tubo]" : "(4) Tubo",
-		forma == 5 ? "(5) [3 Tubos]" : "(5) 3 Tubos",
-		forma == 6 ? "(6) [Teapot]" : "(6) Teapot",
 		xPos, yPos, zPos,
 		lookingAtX, lookingAtY, lookingAtZ,
 		visionX, visionY, visionZ);
@@ -1220,6 +1224,7 @@ void renderInterface() {
 
 	renderString(w - 300, h - 29, GLUT_BITMAP_9_BY_15, buffer);
 
+
 	glPushMatrix(); // Mini camera XYZ axis
 	glTranslatef(w - 70, 70, 0); // Posicionamento
 	glRotatef(-cameraPitch, 1.0f, 0.0f, 0.0f);// Camera rotation 
@@ -1232,7 +1237,25 @@ void renderInterface() {
 	//float zRotationFromModelview = toDegrees(acos(matrizModelview[10]));
 	//printf("%f\n%f\n%f\n\n", xRotationFromModelview, yRotationFromModelview, zRotationFromModelview);
 
-	//glTranslatef(-10, -10, 0);
+	char menuBuffer[1024] = "";
+	char itemBuffer[100];
+	if (mKey)
+	{
+		for (size_t i = 0; i < Objetos.size(); i++)
+		{
+			snprintf(itemBuffer, sizeof itemBuffer,
+				"(%d) %s %s %s \n",
+				i+1,
+				forma == i + 1 ? "[ " : " ",
+				Objetos[i].nome,
+				forma == i + 1 ? "] " : " "
+			);
+			strcat_s(menuBuffer, sizeof(menuBuffer), itemBuffer);
+		}
+	}
+	strcat_s(menuBuffer, sizeof(menuBuffer), "Press M key for object menu");
+	glColor3f(1.0, 1.0, 0.0);
+	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
 }
 
 void renderWorld() {
@@ -1327,43 +1350,91 @@ void renderWorld() {
 	xyzLines();
 	//xyzLines3d();
 	renderCoords();
-	
+
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 
-	switch (forma)
+	ObjetoCompostoOpenGL objetoAtual = Objetos[forma - 1];
+
+	for (ObjetoOpenGL parte : objetoAtual.partes)
 	{
-	case 1:
-		glColor3f(1, 0.7, 0);
-		cubo(10.0);
-		break;
-	case 2:
-		glColor3f(1, 0.7, 0);
-		cone(8.0, 15.0, 360, 80);
-		break;
-	case 3:
-		glColor3f(1, 0.7, 0);
-		cilindro(5.0, 1.0, 36);
-		break;
-	case 4:
-		glColor3f(1, 0.7, 0);
-		tube(3.0, 10.0, 1.0, 36);
-		break;
-	case 5:
-		glColor3f(1, 0.7, 0);
-		comboTubes(3.0, 25.0, 1.4, 36);
-		break;
-	case 6:
-		glColor3f(0.0f, 0.0f, 1.0f);
-		glutSolidTeapot(15.0f);
-		break;
-	case 7:
-		glColor3f(1.0f, 0.0f, 1.0f);
-		tetraHedro();
-		break;
-		/*case 8:
-				glColor3f(1.0f, 0.0f, 1.0f);
-				tetraHedro2();*/
+		glColor3f(parte.r, parte.g, parte.b);
+		glPushMatrix();
+		glTranslatef(parte.x, parte.y, parte.z);
+		switch (parte.tipo)
+		{
+		case 1:
+			// float aresta
+			cubo(parte.params[0]);
+			break;
+		case 2:
+			// float radius, float height, int nLados, int divisoes
+			cone(parte.params[0], parte.params[1], parte.params[2], parte.params[3]);
+			break;
+		case 3:
+			// float radius, float height, int nLados
+			cilindro(parte.params[0], parte.params[1], parte.params[2]);
+			break;
+		case 4:
+			// float innerRadius, float height, float thickness, int nLados
+			tube(parte.params[0], parte.params[1], parte.params[2], parte.params[3]);
+			break;
+		case 5:
+			// float innerRadius, float height, float thickness, int nLados
+			comboTubes(parte.params[0], parte.params[1], parte.params[2], parte.params[3]);
+			break;
+		case 6:
+			// float size
+			glutSolidTeapot(parte.params[0]);
+			break;
+		case 7:
+			glutSolidCube(parte.params[0]);
+			break;
+		case 8:
+			glutSolidSphere(parte.params[0], parte.params[1], parte.params[2]);
+			break;
+		case 9:
+			//glutSolidSierpinskiSponge();
+			break;
+		}
+		glPopMatrix();
 	}
+
+
+
+	//switch (forma)
+	//{
+	//case 1:
+	//	glColor3f(1, 0.7, 0);
+	//	cubo(10.0);
+	//	break;
+	//case 2:
+	//	glColor3f(1, 0.7, 0);
+	//	cone(8.0, 15.0, 360, 80);
+	//	break;
+	//case 3:
+	//	glColor3f(1, 0.7, 0);
+	//	cilindro(5.0, 1.0, 36);
+	//	break;
+	//case 4:
+	//	glColor3f(1, 0.7, 0);
+	//	tube(3.0, 10.0, 1.0, 36);
+	//	break;
+	//case 5:
+	//	glColor3f(1, 0.7, 0);
+	//	comboTubes(3.0, 25.0, 1.4, 36);
+	//	break;
+	//case 6:
+	//	glColor3f(0.0f, 0.0f, 1.0f);
+	//	glutSolidTeapot(15.0f);
+	//	break;
+	//case 7:
+	//	glColor3f(1.0f, 0.0f, 1.0f);
+	//	tetraHedro();
+	//	break;
+	////case 8:
+	////	glColor3f(1.0f, 0.0f, 1.0f);
+	////	tetraHedro2();
+	//}
 
 }
 
