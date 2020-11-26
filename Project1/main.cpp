@@ -27,11 +27,6 @@ public:
 		params = Parametros;
 	}
 
-	/*void distribuirParametros(float parametros[3]) {
-		p1 = parametros[0];
-		p2 = parametros[1];
-		p3 = parametros[2];
-	}*/
 };
 
 class ObjetoCompostoOpenGL
@@ -46,9 +41,12 @@ public:
 	}
 };
 
-char title[64] = "OpenGL-PUCPR - Formas geométricas";
-int RESOLUTION_INITIAL_WIDTH = 1600;
-int RESOLUTION_INITIAL_HEIGHT = 900;
+char title[128] = "OpenGL-PUCPR - Formas geométricas";
+
+//int RESOLUTION_INITIAL_WIDTH = 1280;
+//int RESOLUTION_INITIAL_HEIGHT = 720;
+
+
 
 GLfloat nRange = 120.0f, angleV = 70.0f, fAspect;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
@@ -80,7 +78,7 @@ visionZ = 0,
 xPos = 0,
 yPos = 0,
 zPos = 20,
-speed = 0.2f,
+speed = 1.2f,
 cameraSensitivity = 0.1f,
 matrizModelview[16];
 
@@ -629,7 +627,7 @@ float ftime() {
 }
 
 void definirTitle() {
-	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - %dx%d  %.1fFPS %.0fms ", glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), calculatedFramerate, calculatedFrametime);
+	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - Caio Santos | versão 1.0 %dx%d  %.1fFPS %.0fms ", glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), calculatedFramerate, calculatedFrametime);
 	glutSetWindowTitle(title);
 }
 
@@ -652,7 +650,7 @@ void loadWorldPerspProj() {
 	fAspect = w / h;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(angleV, fAspect, .1, 1000);
+	gluPerspective(angleV, fAspect, .1, 10000);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -1327,7 +1325,7 @@ void renderWorld() {
 
 		glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
 		glColor3f(1, 1, 1);
-		cubo(0.2);
+		glutSolidSphere(1.0, 10, 10);
 		glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
 
 	}
@@ -1393,7 +1391,6 @@ void renderWorld() {
 			glutSolidSphere(parte.params[0], parte.params[1], parte.params[2]);
 			break;
 		case 9:
-			//glutSolidSierpinskiSponge();
 			break;
 		}
 		glPopMatrix();
@@ -1466,7 +1463,7 @@ void render() {
 	glutPostRedisplay();
 
 	lClick = false;
-	speed = calculatedFrametime * 0.0284f;
+	speed = calculatedFrametime * 0.0284f*2;
 }
 
 void reshape(GLsizei w, GLsizei h) {
@@ -1481,8 +1478,12 @@ int main(int argc, char** argv) {
 
 	glutInit(&argc, argv);            // Initialize GLUT
 	glutInitDisplayMode(GLUT_DOUBLE); // Enable double buffered mode
+
+	int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 80;
+	int RESOLUTION_INITIAL_HEIGHT = glutGet(GLUT_SCREEN_HEIGHT) - 120;
+
 	glutInitWindowSize(RESOLUTION_INITIAL_WIDTH, RESOLUTION_INITIAL_HEIGHT);     // Set the window's initial width & height
-	glutInitWindowPosition(100, 100);   // Position the window's initial top-left corner
+	glutInitWindowPosition(40, 40);   // Position the window's initial top-left corner
 	glutCreateWindow("");          // Create window with the given title
 	glutDisplayFunc(render);          // Register callback handler for window re-paint event
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
