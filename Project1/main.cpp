@@ -12,11 +12,11 @@ class ObjetoOpenGL
 {
 public:
 	int tipo;
-	int x, y, z;
+	double x, y, z;
 	float r, g, b;
 	std::vector<float> params;
 
-	ObjetoOpenGL(int Tipo, int X, int Y, int Z, float R, float G, float B, std::vector<float> Parametros) {
+	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float R, float G, float B, std::vector<float> Parametros) {
 		tipo = Tipo;
 		x = X;
 		y = Y;
@@ -53,7 +53,7 @@ GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined 
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
 bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode, globalIllumination = false, depthTest = true;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey, mKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey;
+bool wKey, aKey, sKey, dKey, spaceKey, eKey, mKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey, speedModifier;
 bool shadeModel = true;
 int forma = 1;
 int frame = 0;
@@ -82,6 +82,10 @@ speed = 1.2f,
 cameraSensitivity = 0.1f,
 matrizModelview[16];
 
+GLdouble winX;
+GLdouble winY;
+GLdouble winZ;
+
 std::vector<ObjetoCompostoOpenGL> Objetos;
 
 void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
@@ -99,8 +103,8 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 	*/
 	int numObjects, numPartes;
 	char nome[50];
-	int tipo, x, y, z, numParametros;
-	float r, g, b;
+	int tipo, numParametros;
+	float x, y, z, r, g, b;
 	std::vector<float> parametros;  // cores dos objetos
 
 	fstream inStream;
@@ -141,7 +145,7 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 //}
 
 void initGL() {
-
+	//glutSetOption(GLUT_GEOMETRY_VISUALIZE_NORMALS, 1);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
@@ -194,7 +198,7 @@ void renderStrokeString(float x, float y, const char* string, float scale, bool 
 }
 
 void processSpecialKeys(int key, int x, int y) {
-	printf("%d   -   %d, %d\n", key, x, y);
+	//printf("%d   -   %d, %d\n", key, x, y);
 	switch (key) {
 	case GLUT_KEY_LEFT:
 		leftKey = true;
@@ -213,6 +217,10 @@ void processSpecialKeys(int key, int x, int y) {
 		break;
 	case GLUT_KEY_PAGE_DOWN:
 		pgDnKey = true;
+		break;
+	case GLUT_KEY_F11:
+		printf("Alternado entre Windowed/Fullscreen");
+		glutFullScreenToggle();
 		break;
 	}
 }
@@ -283,6 +291,9 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		break;
 	case 101: // e
 		eKey = true;
+		break;
+	case 'v': // v
+		speedModifier = speedModifier ? false : true;
 		break;
 	case 109: // m
 		mKey = mKey ? false : true;
@@ -650,7 +661,7 @@ void loadWorldPerspProj() {
 	fAspect = w / h;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(angleV, fAspect, .1, 10000);
+	gluPerspective(angleV, fAspect, .001, 10000);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -1243,7 +1254,7 @@ void renderInterface() {
 		{
 			snprintf(itemBuffer, sizeof itemBuffer,
 				"(%d) %s %s %s \n",
-				i+1,
+				i + 1,
 				forma == i + 1 ? "[ " : " ",
 				Objetos[i].nome,
 				forma == i + 1 ? "] " : " "
@@ -1252,8 +1263,21 @@ void renderInterface() {
 		}
 	}
 	strcat_s(menuBuffer, sizeof(menuBuffer), "Press M key for object menu");
+	glPushMatrix();
 	glColor3f(1.0, 1.0, 0.0);
 	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
+	glPopMatrix();
+
+	if (winZ < 1)
+	{
+		glPushMatrix();
+		glBegin(GL_LINES);
+		glVertex3f(w / 2, 0, 0);
+		glVertex3f(winX, winY, winZ);
+		glEnd();
+		renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Uma estrela OMEGALUL");
+		glPopMatrix();
+	}
 }
 
 void renderWorld() {
@@ -1292,7 +1316,7 @@ void renderWorld() {
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
 	//--------------------------------------------------------------------
-	GLfloat luzAmbiente[4] = { 0.05, 0.05, 0.05, 1.0 };
+	GLfloat luzAmbiente[4] = { 0.0, 0.0, 0.0, 1.0 };
 	GLfloat luzDifusa[4] = { 0.9, 0.9, 0.9, 1.0 };	   // "cor" 
 	GLfloat luzEspecular[4] = { 1.0, 1.0, 1.0, 1.0 };// "brilho" 
 
@@ -1316,38 +1340,33 @@ void renderWorld() {
 	glLightfv(GL_LIGHT0, GL_SPECULAR, luzEspecular);
 	glLightfv(GL_LIGHT0, GL_POSITION, posicaoLuz);
 
+	//glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 2);
+	//glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.005f);
+
 	// Habilita a definição da cor do material a partir da cor corrente
 
-	if (globalIllumination)
-	{
-		glEnable(GL_COLOR_MATERIAL);
-		glEnable(GL_LIGHT0);
+	glEnable(GL_COLOR_MATERIAL);
+	glEnable(GL_LIGHT0);
 
-		glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
-		glColor3f(1, 1, 1);
-		glutSolidSphere(1.0, 10, 10);
-		glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
+	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
+	glColor3f(1, 1, 1);
+	glutSolidSphere((696340.0 / 1000000.0), 10, 10);
+	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
 
-	}
-	else
-	{
-		glDisable(GL_COLOR_MATERIAL);
-		glDisable(GL_LIGHT0);
-	}
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 
 	glColor3f(0.3, 0.3, 0.3);
-	plano(-20, 100, 300); // plano fixo
+	//plano(-20, 100, 300); // plano fixo
 
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	glDisable(GL_LIGHTING);
-	xyzLines();
+	//xyzLines();
 	//xyzLines3d();
-	renderCoords();
+	//renderCoords();
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 
@@ -1396,6 +1415,18 @@ void renderWorld() {
 		glPopMatrix();
 	}
 
+	//	8 150 10 0.0 0.0 0.0 1.0 3 0.006371 100 100
+
+	
+	GLdouble Mview[16];
+	GLdouble Mprj[16];
+	GLint vprt[4];
+	glGetDoublev(GL_MODELVIEW_MATRIX, Mview);
+	glGetDoublev(GL_PROJECTION_MATRIX, Mprj);
+	glGetIntegerv(GL_VIEWPORT, vprt);
+
+	gluProject(150, 10, 0, Mview, Mprj, vprt, &winX, &winY, &winZ);
+	//printf("%f, %f, %f\n", winX, winY, winZ);
 
 
 	//switch (forma)
@@ -1463,7 +1494,7 @@ void render() {
 	glutPostRedisplay();
 
 	lClick = false;
-	speed = calculatedFrametime * 0.0284f*2;
+	speed = calculatedFrametime * (0.0284f - 0.0283 * speedModifier);
 }
 
 void reshape(GLsizei w, GLsizei h) {
