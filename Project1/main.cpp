@@ -49,7 +49,8 @@ public:
 };
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.02";
+char ver[8] = "1.03";
+
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
  
@@ -62,8 +63,8 @@ GLfloat
 nRange = 120.0f, 
 angleV = 70.0f, 
 fAspect, 
-vNear = 0.001, 
-vFar = 10000,
+zNear = 0.001, 
+zFar = 10000,
 angleX = 0.0f, 
 angleY = 0.0f, 
 angleZ = 0.0f, // Arrow keys user-defined rotation
@@ -143,9 +144,6 @@ objY,
 objZ,
 Mmodelview[16],
 Mprojection[16];
-//objX2,
-//objY2,
-//objZ2;
 
 std::vector<ObjetoCompostoOpenGL> Objetos;
 std::vector<ObjetoOpenGL> Retas;
@@ -208,7 +206,7 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 
 void initGL() {
 	//glutSetOption(GLUT_GEOMETRY_VISUALIZE_NORMALS, 1);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
+	glClearColor(0.5f, 0.5f, 0.5f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
@@ -387,36 +385,40 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		shadeModel = shadeModel ? false : true;
 		shadeModel ? glShadeModel(GL_SMOOTH) : glShadeModel(GL_FLAT);
 		break;
-	case 49: // 1 
+	case '1': // 1 
 		forma = 1;
 		break;
-	case 50: // 2
+	case '2': // 2
 		forma = 2;
 		break;
-	case 51: // 3
+	case '3': // 3
 		forma = 3;
 		break;
-	case 52: // 4
+	case '4': // 4
 		forma = 4;
 		break;
-	case 53: // 5
+	case '5': // 5
 		forma = 5;
 		break;
-	case 54: // 6
+	case '6': // 6
 		forma = 6;
 		break;
-	case 55: // 7
+	case '7': // 7
 		forma = 7;
 		break;
-	case 56: // 8
+	case '8': // 8
 		forma = 8;
 		break;
-	case 57: // 9
+	case '9': // 9
 		forma = 9;
 		break;
-	case 48: // 0
+	case '0': // 0
 		forma = 10;
 		break;
+	}
+	if (key >= 48 && key <= 57) // Mudança de objeto, desselecionar objeto
+	{
+		idSelecionado = 0;
 	}
 }
 
@@ -451,13 +453,17 @@ unsigned int selecionarObjeto() {
 	glPushMatrix();
 	glLoadIdentity();
 	gluPickMatrix(mouseX, viewport[3] - mouseY, 5.0, 5.0, viewport);
-	gluPerspective(angleV, fAspect, vNear, vFar);
+	gluPerspective(angleV, fAspect, zNear, zFar);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	renderWorld();
-	glutSwapBuffers();
+	//glutSwapBuffers();
 	glPopMatrix();
 	hits = glRenderMode(GL_RENDER);
+	if (!hits)
+	{
+		return 0;
+	}
 	printf("%d hits\n", hits);
 	printf("selectBuffer[3] = %d\n", selectBuffer[3]);
 	unsigned int objSelecionado, menorDepth, menorDepthObj, menorDepthIndex = 1;
@@ -794,7 +800,7 @@ void loadWorldPerspProj() {
 	fAspect = w / h;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(angleV, fAspect, vNear, vFar);
+	gluPerspective(angleV, fAspect, zNear, zFar);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -1189,7 +1195,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	float finalThickness = sizeFactor * thicknessFactor;
 
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
-
+	glLoadName(1);
 	glRotatef(-90, 0.0f, 0.0f, 1.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
@@ -1198,14 +1204,46 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glRotatef(90, 0.0f, 0.0f, 1.0f);
 
 	glColor3f(0.0, 1.0, 0.0); // Green - Y
-
+	glLoadName(2);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
 	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 
 	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
+	glLoadName(3);
+	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
+	glTranslatef(0, 20 * finalLength, 0);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
+	glTranslatef(0, -20 * finalLength, 0);
+	glRotatef(-90, 1.0f, 0.0f, 0.0f);
 
+}
+
+void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1, float lengthFactor = 1, float thicknessFactor = 1, bool pointy = 0) {////////////////////////
+
+	float finalLength = sizeFactor * lengthFactor;
+	float finalThickness = sizeFactor * thicknessFactor;
+
+	glColor3f(1.0, 0.0, 0.0); // Red - X 
+	glLoadName(4);
+	glRotatef(rx, 0.0f, 0.0f, 1.0f);
+	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
+	glTranslatef(0, 20 * finalLength, 0);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
+	glTranslatef(0, -20 * finalLength, 0);
+	glRotatef(90, 0.0f, 0.0f, 1.0f);
+
+	glColor3f(0.0, 1.0, 0.0); // Green - Y
+	glLoadName(5);
+	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
+	glTranslatef(0, 20 * finalLength, 0);
+	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
+	glTranslatef(0, -20 * finalLength, 0);
+
+	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
+	glLoadName(6);
 	glRotatef(90, 1.0f, 0.0f, 0.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
@@ -1277,6 +1315,8 @@ void escapeMenu(int screenX, int screenY) {
 	//	option button
 	//	quit button
 }
+
+
 
 void renderInterface() {
 
@@ -1442,7 +1482,7 @@ void renderInterface() {
 		glPushMatrix();
 		glBegin(GL_LINES);
 		glVertex3f(winX, winY, winZ);
-		glVertex3f(370, (h - 600), 0);
+		glVertex3f(370, (h - 490), 0);
 		glEnd();
 		glPopMatrix();
 	}
@@ -1453,10 +1493,6 @@ void renderWorld() {
 	int nome = 1;
 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
-
-	glGetDoublev(GL_MODELVIEW_MATRIX, Mmodelview);
-	glGetDoublev(GL_PROJECTION_MATRIX, Mprojection);
-	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	front ? glPolygonMode(GL_FRONT, GL_LINE) : glPolygonMode(GL_FRONT, GL_FILL);
 	back ? glPolygonMode(GL_BACK, GL_LINE) : glPolygonMode(GL_BACK, GL_FILL);
@@ -1523,6 +1559,10 @@ void renderWorld() {
 	glRotatef(rotX, 1.0f, 0.0f, 0.0f); // global rotation 
 	glRotatef(rotY, 0.0f, 1.0f, 0.0f);
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
+
+	glGetDoublev(GL_MODELVIEW_MATRIX, Mmodelview);
+	glGetDoublev(GL_PROJECTION_MATRIX, Mprojection);
+	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	glDisable(GL_LIGHTING);
 	xyzLines();
