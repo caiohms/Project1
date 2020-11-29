@@ -52,34 +52,72 @@ char title[128] = "OpenGL-PUCPR - Formas geométricas";
 char ver[8] = "1.02";
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
-
-GLdouble Mmodelview[16];
-GLdouble Mprojection[16];
+ 
 GLint viewport[4];
 
 GLuint selectBuffer[100];
 GLint hits;
 
-GLfloat nRange = 120.0f, angleV = 70.0f, fAspect, vNear = 0.001, vFar = 10000;
-GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
-GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
+GLfloat 
+nRange = 120.0f, 
+angleV = 70.0f, 
+fAspect, 
+vNear = 0.001, 
+vFar = 10000,
+angleX = 0.0f, 
+angleY = 0.0f, 
+angleZ = 0.0f, // Arrow keys user-defined rotation
+rotX = 0.0f, 
+rotY = 0.0f, 
+rotZ = 0.0f, // The final global rotation (with added animation)
+mouseZ;
 
-bool animate, animateX, animateY, animateZ, polygonMode, front, back, cface, projMode, globalIllumination = false, depthTest = true;
-bool wKey, aKey, sKey, dKey, spaceKey, eKey, mKey, upKey, leftKey, rightKey, downKey, pgDnKey, pgUpKey, rClick, lClick, escKey, speedModifier;
-bool shadeModel = true;
-int forma = 1;
-int frame = 0;
-GLfloat mouseZ;
+bool
+animate,
+animateX,
+animateY,
+animateZ,
+polygonMode,
+front,
+back,
+cface,
+projMode,
+globalIllumination = false,
+depthTest = true,
+shadeModel = true,
+wKey, aKey, sKey, dKey, spaceKey, eKey, mKey,
+upKey, leftKey, rightKey, downKey, pgDnKey,
+pgUpKey, rClick, lClick, escKey, speedModifier;
+
+
 int
+forma = 1,
+frame = 0,
 mouseX, // live mouse position X axis updated every frame
 mouseY, // live mouse position Y axis
 rClickX, // mouse right click X position updates on right click and/or right click dragging
 rClickY, // mouse right click Y position
 lClickX, // mouse left click X position updates on left click (no dragging)
 lClickY, // mouse left click Y position
-mouseMovedX, mouseMovedY, lastX, lastY, idSelecionado; // camera movement mouse variables
-float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
-float versorVisionX, versorVisionY, versorVisionZ, visionMag,
+mouseMovedX, // camera movement mouse variables
+mouseMovedY, 
+lastX, 
+lastY, 
+idSelecionado; 
+
+float 
+rAngle, 
+time, 
+time1, 
+framerate, 
+frametime, 
+lasttime, 
+calculatedFramerate, 
+calculatedFrametime,
+versorVisionX, 
+versorVisionY, 
+versorVisionZ, 
+visionMag,
 cameraPitch = 0.0f,
 cameraYaw = 270.0f,
 lookingAtX = 0,
@@ -92,21 +130,22 @@ xPos = 0,
 yPos = 0,
 zPos = 20,
 speed = 1.2f,
-cameraSensitivity = 0.1f,
-matrizModelview[16];
+cameraSensitivity = 0.1f;
 
 ObjetoOpenGL objSelecionado;
 
-GLdouble winX;
-GLdouble winY;
-GLdouble winZ;
-
-GLdouble objX;
-GLdouble objY;
-GLdouble objZ;
-GLdouble objX2;
-GLdouble objY2;
-GLdouble objZ2;
+GLdouble 
+winX,
+winY,
+winZ,
+objX,
+objY,
+objZ,
+Mmodelview[16],
+Mprojection[16];
+//objX2,
+//objY2,
+//objZ2;
 
 std::vector<ObjetoCompostoOpenGL> Objetos;
 std::vector<ObjetoOpenGL> Retas;
@@ -1315,21 +1354,17 @@ void renderInterface() {
 	glColor3f(1.0, 1.0, 0.0);
 	renderString(5, h - 29, GLUT_BITMAP_9_BY_15, buffer);
 
-	//matrizModelview[0], matrizModelview[1], matrizModelview[2], matrizModelview[3],
-	//matrizModelview[4], matrizModelview[5], matrizModelview[6], matrizModelview[7],
-	//matrizModelview[8], matrizModelview[9], matrizModelview[10], matrizModelview[11],
-	//matrizModelview[12], matrizModelview[13], matrizModelview[14], matrizModelview[15]
-
 	snprintf(buffer, sizeof buffer,
 		"GL_MODELVIEW_MATRIX \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n",
-		matrizModelview[0], matrizModelview[1], matrizModelview[2], matrizModelview[3],
-		matrizModelview[4], matrizModelview[5], matrizModelview[6], matrizModelview[7],
-		matrizModelview[8], matrizModelview[9], matrizModelview[10], matrizModelview[11],
-		matrizModelview[12], matrizModelview[13], matrizModelview[14], matrizModelview[15]
+		
+		Mmodelview[0], Mmodelview[1], Mmodelview[2], Mmodelview[3],
+		Mmodelview[4], Mmodelview[5], Mmodelview[6], Mmodelview[7],
+		Mmodelview[8], Mmodelview[9], Mmodelview[10], Mmodelview[11],
+		Mmodelview[12], Mmodelview[13], Mmodelview[14], Mmodelview[15]
 	);
 
 	renderString(w - 300, h - 29, GLUT_BITMAP_9_BY_15, buffer);
@@ -1341,11 +1376,6 @@ void renderInterface() {
 	glRotatef(cameraYaw + 90, 0.0f, 1.0f, 0.0f);
 	xyzLines3d(.5, 5, 100, 1);
 	glPopMatrix();
-
-	//float xRotationFromModelview = toDegrees(acos(matrizModelview[0]));
-	//float yRotationFromModelview = toDegrees(acos(matrizModelview[5]));
-	//float zRotationFromModelview = toDegrees(acos(matrizModelview[10]));
-	//printf("%f\n%f\n%f\n\n", xRotationFromModelview, yRotationFromModelview, zRotationFromModelview);
 
 	char menuBuffer[1024] = "";
 	char itemBuffer[100];
