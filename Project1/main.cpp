@@ -13,14 +13,17 @@ class ObjetoOpenGL
 public:
 	int tipo;
 	double x, y, z;
-	float r, g, b;
+	float rX, rY, rZ, r, g, b;
 	std::vector<float> params;
 
-	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float R, float G, float B, std::vector<float> Parametros) {
+	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float RX, float RY, float RZ, float R, float G, float B, std::vector<float> Parametros) {
 		tipo = Tipo;
 		x = X;
 		y = Y;
 		z = Z;
+		rX = RX;
+		rY = RY;
+		rZ = RZ;
 		r = R;
 		g = G;
 		b = B;
@@ -35,7 +38,7 @@ public:
 	char nome[50];
 	std::vector<ObjetoOpenGL> partes;
 
-	ObjetoCompostoOpenGL(char Nome[50]) {
+	ObjetoCompostoOpenGL(const char Nome[50], std::vector<ObjetoOpenGL> partes = {}) {
 		memcpy(nome, Nome, sizeof(char) * 50);
 
 	}
@@ -46,7 +49,9 @@ char title[128] = "OpenGL-PUCPR - Formas geométricas";
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
 
-
+GLdouble Mmodelview[16];
+GLdouble Mprojection[16];
+GLint viewport[4];
 
 GLfloat nRange = 120.0f, angleV = 70.0f, fAspect;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
@@ -57,6 +62,7 @@ bool wKey, aKey, sKey, dKey, spaceKey, eKey, mKey, upKey, leftKey, rightKey, dow
 bool shadeModel = true;
 int forma = 1;
 int frame = 0;
+GLfloat mouseZ;
 int
 mouseX, // live mouse position X axis updated every frame
 mouseY, // live mouse position Y axis
@@ -86,7 +92,15 @@ GLdouble winX;
 GLdouble winY;
 GLdouble winZ;
 
+GLdouble objX;
+GLdouble objY;
+GLdouble objZ;
+GLdouble objX2;
+GLdouble objY2;
+GLdouble objZ2;
+
 std::vector<ObjetoCompostoOpenGL> Objetos;
+std::vector<ObjetoOpenGL> Retas;
 
 void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 {
@@ -104,7 +118,7 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 	int numObjects, numPartes;
 	char nome[50];
 	int tipo, numParametros;
-	float x, y, z, r, g, b;
+	float x, y, z, rX, rY, rZ, r, g, b;
 	std::vector<float> parametros;  // cores dos objetos
 
 	fstream inStream;
@@ -121,14 +135,14 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 		for (int j = 1; j <= numPartes; j++) // Para cada parte
 		{
 			parametros.clear();
-			inStream >> tipo >> x >> y >> z >> r >> g >> b >> numParametros; // Lê um objeto open gl (uma parte)
+			inStream >> tipo >> x >> y >> z >> rX >> rY >> rZ >> r >> g >> b >> numParametros; // Lê um objeto open gl (uma parte)
 			for (int k = 0; k < numParametros; k++) // Para cada parametro adicional, le uma linha nova com cada parametro
 			{
 				float p;
 				inStream >> p;
 				parametros.push_back(p);
 			}
-			ObjetoOpenGL parte(tipo, x, y, z, r, g, b, parametros); // Cria a parte
+			ObjetoOpenGL parte(tipo, x, y, z, rX, rY, rZ, r, g, b, parametros); // Cria a parte
 			//parte.distribuirParametros(parametros); // distribui os parametros lidos para as variaveis dentro do objeto 'parte'
 			novoObjeto.partes.push_back(parte); // mexendo na variável pública para fins de teste
 		}
@@ -254,6 +268,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 27:
 		escKey = escKey ? false : true;
 	case 114:  // r
+		Retas.clear();
 		rAngle = 0;
 		angleX = 0;
 		angleY = 0;
@@ -378,6 +393,24 @@ void processNormalKeysUp(unsigned char key, int x, int y) {
 	}
 }
 
+void desenharRaycast() {
+	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
+
+	//gluUnProject(mouseX, -mouseY, winZ, Mmodelview, Mprojection, viewport, &objX2, &objY2, &objZ2);
+
+	glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
+	gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
+	printf("%f, %f, %f\n", (float)objX, (float)objY, (float)objZ);
+
+ 	std::vector<float> p = { xPos, yPos, zPos, (float)objX, (float)objY, (float)objZ };
+
+	ObjetoOpenGL objReta(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, p);
+
+	Retas.emplace_back(objReta);
+
+	printf("%d\n", Retas.size());
+}
+
 void mouse(int button, int state, int x, int y)
 {
 	printf("%d Button %s At %d %d\n", button, (state == GLUT_DOWN) ? "Down" : "Up", x, y);
@@ -388,6 +421,8 @@ void mouse(int button, int state, int x, int y)
 		lClick = true;
 		lClickX = x;
 		lClickY = y;
+
+		desenharRaycast();
 	}
 
 	if (button == 2) // right click
@@ -409,8 +444,23 @@ void mouse(int button, int state, int x, int y)
 	if ((button == 3) || (button == 4)) // scroll wheel
 	{
 		if (state == GLUT_UP) return;
-		// scroll wheel changes nRange when in orthogonal projection and changes camera view angle when in perspective mode
-		(button == 3) ? (projMode ? nRange -= 1.0 : angleV -= 2.0) : (projMode ? nRange += 0.5 : angleV += 1);
+		// Scroll wheel muda nRange quando em projeção ortogonal e muda angleV quando em projeção perspectiva
+		if (button == 3)
+		{
+			if (projMode) {
+				if (nRange > 0.5) nRange -= 0.5;
+			}
+			else
+				if (angleV > 0.5) angleV -= 0.5;
+		}
+		else
+		{
+			if (projMode) {
+				nRange += 0.5;
+			}
+			else
+				if (angleV < 179.5) angleV += 0.5;
+		}
 	}
 }
 
@@ -687,6 +737,13 @@ void plano(float y, float size, int divisoes) {
 			glVertex3f(xmin + passoX * (i + 1), y, zmin + passoZ * j);
 		}
 	}
+	glEnd();
+}
+
+void reta(float xi, float yi, float zi, float xf, float yf, float zf) {
+	glBegin(GL_LINES);
+	glVertex3f(xi, yi, zi);
+	glVertex3f(xf, yf, zf);
 	glEnd();
 }
 
@@ -1268,16 +1325,18 @@ void renderInterface() {
 	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
 	glPopMatrix();
 
-	if (winZ < 1)
+	if (forma == 5 && winZ < 1)
 	{
 		glPushMatrix();
 		glBegin(GL_LINES);
 		glVertex3f(w / 2, 0, 0);
 		glVertex3f(winX, winY, winZ);
 		glEnd();
-		renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Uma estrela OMEGALUL");
+		renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Terra");
 		glPopMatrix();
 	}
+
+
 }
 
 void renderWorld() {
@@ -1350,7 +1409,7 @@ void renderWorld() {
 
 	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
 	glColor3f(1, 1, 1);
-	glutSolidSphere((696340.0 / 1000000.0), 10, 10);
+	glutSolidSphere((696340.0 / 1000000.0), 100, 100);
 	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
 
 
@@ -1364,21 +1423,45 @@ void renderWorld() {
 	glRotatef(rotZ, 0.0f, 0.0f, 1.0f);
 
 	glDisable(GL_LIGHTING);
-	//xyzLines();
-	//xyzLines3d();
-	//renderCoords();
+	xyzLines();
+	renderCoords();
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 
 	ObjetoCompostoOpenGL objetoAtual = Objetos[forma - 1];
+
+	if (!strcmp(objetoAtual.nome, "SistemaSolar"))
+	{
+		glColor3f(1.0, 1.0, 1.0);
+		renderString3D(57.91, 18.01, 0.0, GLUT_BITMAP_9_BY_15, "Mercurio");
+		renderString3D(108.2, 18.01, 0.0, GLUT_BITMAP_9_BY_15, "Venus");
+		renderString3D(150, 18.01, 0.3844, GLUT_BITMAP_9_BY_15, "Lua");
+		renderString3D(227.9, 18.01, 0.0, GLUT_BITMAP_9_BY_15, "Marte");
+		renderString3D(778.57, 18.01, 0.0, GLUT_BITMAP_9_BY_15, "Jupiter");
+	}
+
+	for (ObjetoOpenGL r : Retas)
+	{
+		glColor3f(1, 1, 1);
+		glPushMatrix();
+		reta(r.params[0], r.params[1], r.params[2], r.params[3], r.params[4], r.params[5]);
+		glPopMatrix();
+	}
 
 	for (ObjetoOpenGL parte : objetoAtual.partes)
 	{
 		glColor3f(parte.r, parte.g, parte.b);
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
+		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
+		glRotatef(parte.rY, 0.0f, 1.0f, 0.0f);
+		glRotatef(parte.rZ, 0.0f, 0.0f, 1.0f);
 		switch (parte.tipo)
 		{
+		case 0:
+			// float xi, float yi, float zi, float xf, float yf, float zf
+			reta(parte.params[0], parte.params[1], parte.params[2], parte.params[3], parte.params[4], parte.params[5]);
+			break;
 		case 1:
 			// float aresta
 			cubo(parte.params[0]);
@@ -1410,59 +1493,28 @@ void renderWorld() {
 			glutSolidSphere(parte.params[0], parte.params[1], parte.params[2]);
 			break;
 		case 9:
+			glutSolidTeacup(parte.params[0]);
+			break;
+		case 10:
+			glutSolidTeaspoon(parte.params[0]);
 			break;
 		}
 		glPopMatrix();
 	}
 
-	//	8 150 10 0.0 0.0 0.0 1.0 3 0.006371 100 100
-
 	
-	GLdouble Mview[16];
-	GLdouble Mprj[16];
-	GLint vprt[4];
-	glGetDoublev(GL_MODELVIEW_MATRIX, Mview);
-	glGetDoublev(GL_PROJECTION_MATRIX, Mprj);
-	glGetIntegerv(GL_VIEWPORT, vprt);
+	GLdouble objX, objY, objZ;
+	glGetDoublev(GL_MODELVIEW_MATRIX, Mmodelview);
+	glGetDoublev(GL_PROJECTION_MATRIX, Mprojection);
+	glGetIntegerv(GL_VIEWPORT, viewport);
 
-	gluProject(150, 10, 0, Mview, Mprj, vprt, &winX, &winY, &winZ);
-	//printf("%f, %f, %f\n", winX, winY, winZ);
+	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
 
+	//gluUnProject(mouseX, -mouseY, winZ, Mmodelview, Mprojection, viewport, &objX2, &objY2, &objZ2);
 
-	//switch (forma)
-	//{
-	//case 1:
-	//	glColor3f(1, 0.7, 0);
-	//	cubo(10.0);
-	//	break;
-	//case 2:
-	//	glColor3f(1, 0.7, 0);
-	//	cone(8.0, 15.0, 360, 80);
-	//	break;
-	//case 3:
-	//	glColor3f(1, 0.7, 0);
-	//	cilindro(5.0, 1.0, 36);
-	//	break;
-	//case 4:
-	//	glColor3f(1, 0.7, 0);
-	//	tube(3.0, 10.0, 1.0, 36);
-	//	break;
-	//case 5:
-	//	glColor3f(1, 0.7, 0);
-	//	comboTubes(3.0, 25.0, 1.4, 36);
-	//	break;
-	//case 6:
-	//	glColor3f(0.0f, 0.0f, 1.0f);
-	//	glutSolidTeapot(15.0f);
-	//	break;
-	//case 7:
-	//	glColor3f(1.0f, 0.0f, 1.0f);
-	//	tetraHedro();
-	//	break;
-	////case 8:
-	////	glColor3f(1.0f, 0.0f, 1.0f);
-	////	tetraHedro2();
-	//}
+	//glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
+	//gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
+	//printf("%f, %f, %f\n", (float)objX, (float)objY, (float)objZ);
 
 }
 
@@ -1494,7 +1546,7 @@ void render() {
 	glutPostRedisplay();
 
 	lClick = false;
-	speed = calculatedFrametime * (0.0284f - 0.0283 * speedModifier);
+	speed = calculatedFrametime * (0.0284f - 0.02839 * speedModifier);
 }
 
 void reshape(GLsizei w, GLsizei h) {
@@ -1508,13 +1560,14 @@ int main(int argc, char** argv) {
 	DisplayFileRead("df.txt");              // se estiver aqui, le somente uma vez
 
 	glutInit(&argc, argv);            // Initialize GLUT
-	glutInitDisplayMode(GLUT_DOUBLE); // Enable double buffered mode
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_MULTISAMPLE);
 
-	int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 80;
+	//int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 80;
+	int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 800;
 	int RESOLUTION_INITIAL_HEIGHT = glutGet(GLUT_SCREEN_HEIGHT) - 120;
 
 	glutInitWindowSize(RESOLUTION_INITIAL_WIDTH, RESOLUTION_INITIAL_HEIGHT);     // Set the window's initial width & height
-	glutInitWindowPosition(40, 40);   // Position the window's initial top-left corner
+	glutInitWindowPosition(840, 40);   // Position the window's initial top-left corner
 	glutCreateWindow("");          // Create window with the given title
 	glutDisplayFunc(render);          // Register callback handler for window re-paint event
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
