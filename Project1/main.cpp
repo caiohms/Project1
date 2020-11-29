@@ -48,7 +48,7 @@ public:
 };
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-
+char ver[8] = "1.01";
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
 
@@ -717,7 +717,7 @@ float ftime() {
 }
 
 void definirTitle() {
-	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - Caio Santos | versão 1.0 %dx%d  %.1fFPS %.0fms ", glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), calculatedFramerate, calculatedFrametime);
+	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - Caio Santos | versão %s %dx%d  %.1fFPS %.0fms ", ver, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), calculatedFramerate, calculatedFrametime);
 	glutSetWindowTitle(title);
 }
 
