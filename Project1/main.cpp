@@ -56,14 +56,14 @@ char ver[8] = "1.03";
  
 GLint viewport[4];
 
-GLuint selectBuffer[100];
+GLuint selectBuffer[1000];
 GLint hits;
 
 GLfloat 
 nRange = 120.0f, 
 angleV = 70.0f, 
 fAspect, 
-zNear = 0.001, 
+zNear = 0.01, 
 zFar = 10000,
 angleX = 0.0f, 
 angleY = 0.0f, 
@@ -83,13 +83,13 @@ front,
 back,
 cface,
 projMode,
+moving,
 globalIllumination = false,
 depthTest = true,
 shadeModel = true,
 wKey, aKey, sKey, dKey, spaceKey, eKey, mKey,
 upKey, leftKey, rightKey, downKey, pgDnKey,
 pgUpKey, rClick, lClick, escKey, speedModifier;
-
 
 int
 forma = 1,
@@ -130,7 +130,7 @@ visionZ = 0,
 xPos = 0,
 yPos = 0,
 zPos = 20,
-speed = 1.2f,
+speed = 1.0f,
 cameraSensitivity = 0.1f;
 
 ObjetoOpenGL objSelecionado;
@@ -206,7 +206,7 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 
 void initGL() {
 	//glutSetOption(GLUT_GEOMETRY_VISUALIZE_NORMALS, 1);
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f); // Set background color to black and opaque
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
@@ -474,7 +474,6 @@ unsigned int selecionarObjeto() {
 		if (newDepth < menorDepth) {
 			menorDepth = newDepth;
 			menorDepthIndex = 1 + i * 4;
-			menorDepthIndex = 1 + i * 4;
 		}
 	}
 	menorDepthObj = selectBuffer[menorDepthIndex + 2];
@@ -556,6 +555,11 @@ void mouse(int button, int state, int x, int y)
 void mouseMovement(int x, int y) {
 	mouseX = x;
 	mouseY = y;
+
+	if (lClick)
+	{
+
+	}
 
 	if (rClick)
 	{
@@ -1199,7 +1203,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glRotatef(-90, 0.0f, 0.0f, 1.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
+	cone(0.1 * finalThickness, 0.4 * finalLength + (pointy * 10*sizeFactor), 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(90, 0.0f, 0.0f, 1.0f);
 
@@ -1207,7 +1211,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glLoadName(2);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
+	cone(0.1 * finalThickness, 0.4 * finalLength + (pointy * 10 * sizeFactor), 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 
 	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
@@ -1215,7 +1219,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glRotatef(90, 1.0f, 0.0f, 0.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
+	cone(0.1 * finalThickness, 0.4 * finalLength + (pointy * 10 * sizeFactor), 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(-90, 1.0f, 0.0f, 0.0f);
 
@@ -1276,7 +1280,7 @@ void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* t
 
 	if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
 	{
-		lClick ? glColor3f(0.0, 1.0, 0.0) : glColor3f(0.3, 0.3, 0.3);
+		glColor3f(0.0, 1.0, 0.0);
 		draw2dBoxFilled(leftX, bottomY, rightX, topY);
 		if (lClick) f();
 
@@ -1479,14 +1483,17 @@ void renderInterface() {
 		renderString(250, h - 400, GLUT_BITMAP_9_BY_15, buffer);
 
 		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
-		glPushMatrix();
-		glBegin(GL_LINES);
-		glVertex3f(winX, winY, winZ);
-		glVertex3f(370, (h - 490), 0);
-		glEnd();
-		glPopMatrix();
-	}
 
+		if (winZ < 1)
+		{
+			glPushMatrix();
+			glBegin(GL_LINES);
+			glVertex3f(winX, winY, winZ);
+			glVertex3f(370, (h - 490), 0);
+			glEnd();
+			glPopMatrix();
+		}
+	}
 }
 
 void renderWorld() {
@@ -1498,6 +1505,8 @@ void renderWorld() {
 	back ? glPolygonMode(GL_BACK, GL_LINE) : glPolygonMode(GL_BACK, GL_FILL);
 
 	movement(); // movimento WASD
+	moving = false;
+	if (wKey || aKey || sKey || dKey || spaceKey || eKey) moving = true;
 
 	angleX = (angleX >= 360) ? (angleX -= 360) : (angleX < 0) ? (angleX += 360) : angleX; // 0 <= angleX < 360
 	angleY = (angleY >= 360) ? (angleY -= 360) : (angleY < 0) ? (angleY += 360) : angleY;
@@ -1565,8 +1574,8 @@ void renderWorld() {
 	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	glDisable(GL_LIGHTING);
-	xyzLines();
-	renderCoords();
+	//xyzLines();
+	//renderCoords();
 
 	ObjetoCompostoOpenGL objetoAtual = Objetos[forma - 1];
 
@@ -1596,9 +1605,26 @@ void renderWorld() {
 		parte.id = nome;
 		++nome;
 		if (idSelecionado == parte.id) {
-			glColor3f(0, 1, 0);
+			
 			glDisable(GL_LIGHTING);
 			objSelecionado = parte;
+
+			if (!moving && rotX == 0 && rotY == 0 && rotZ == 0)
+			{
+				float x = xPos - parte.x;
+				float y = yPos - parte.y;
+				float z = zPos - parte.z;
+				float vo[3], v[3] = { x,y,z };
+				normalizarVetor(v, 3, vo);
+				glPushMatrix();
+				glTranslatef(xPos - vo[0] * 5, yPos - vo[1] * 5, zPos - vo[2] * 5);
+				xyzLines3d(.005, 5, 100, 1);
+
+				glPopMatrix();
+			}
+			
+
+			glColor3f(0, 0.5, 0);
 		}
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
@@ -1689,7 +1715,7 @@ void render() {
 	glutPostRedisplay();
 
 	lClick = false;
-	speed = calculatedFrametime * (0.0284f - 0.02839 * speedModifier);
+	speed = calculatedFrametime * (0.1284f - 0.02839 * speedModifier);
 }
 
 void reshape(GLsizei w, GLsizei h) {
