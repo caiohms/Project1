@@ -13,7 +13,7 @@ void renderWorld();
 class ObjetoOpenGL
 {
 public:
-	int tipo;
+	int tipo, id = 0;
 	bool selected;
 	double x, y, z;
 	float rX, rY, rZ, r, g, b;
@@ -33,6 +33,7 @@ public:
 		params = Parametros;
 	}
 
+	ObjetoOpenGL() {};
 };
 
 class ObjetoCompostoOpenGL
@@ -48,7 +49,7 @@ public:
 };
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.01";
+char ver[8] = "1.02";
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
 
@@ -56,7 +57,7 @@ GLdouble Mmodelview[16];
 GLdouble Mprojection[16];
 GLint viewport[4];
 
-GLuint selectBuffer[3000];
+GLuint selectBuffer[100];
 GLint hits;
 
 GLfloat nRange = 120.0f, angleV = 70.0f, fAspect, vNear = 0.001, vFar = 10000;
@@ -76,7 +77,7 @@ rClickX, // mouse right click X position updates on right click and/or right cli
 rClickY, // mouse right click Y position
 lClickX, // mouse left click X position updates on left click (no dragging)
 lClickY, // mouse left click Y position
-mouseMovedX, mouseMovedY, lastX, lastY; // camera movement mouse variables
+mouseMovedX, mouseMovedY, lastX, lastY, idSelecionado; // camera movement mouse variables
 float rAngle, time, time1, framerate, frametime, lasttime, calculatedFramerate, calculatedFrametime;
 float versorVisionX, versorVisionY, versorVisionZ, visionMag,
 cameraPitch = 0.0f,
@@ -93,6 +94,8 @@ zPos = 20,
 speed = 1.2f,
 cameraSensitivity = 0.1f,
 matrizModelview[16];
+
+ObjetoOpenGL objSelecionado;
 
 GLdouble winX;
 GLdouble winY;
@@ -166,14 +169,13 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 
 void initGL() {
 	//glutSetOption(GLUT_GEOMETRY_VISUALIZE_NORMALS, 1);
-
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
 	glShadeModel(GL_SMOOTH);     // Enable smooth shading
 	//glEnable(GL_NORMALIZE);
-	glSelectBuffer(3000, selectBuffer);
+	glSelectBuffer(100, selectBuffer);
 }
 
 float toRadians(float angle) {
@@ -275,8 +277,9 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	switch (key) {
 	case 27:
 		escKey = escKey ? false : true;
-	case 114:  // r
+	case 'r':  // r
 		Retas.clear();
+		idSelecionado = 0;
 		rAngle = 0;
 		angleX = 0;
 		angleY = 0;
@@ -380,28 +383,28 @@ void processNormalKeys(unsigned char key, int x, int y) {
 
 void processNormalKeysUp(unsigned char key, int x, int y) {
 	switch (key) {
-	case 119: // w
+	case 'w':
 		wKey = false;
 		break;
-	case 97: // a
+	case 'a':
 		aKey = false;
 		break;
-	case 115: // s
+	case 's':
 		sKey = false;
 		break;
-	case 100: // d
+	case 'd':
 		dKey = false;
 		break;
-	case 32: // spacebar
+	case ' ':
 		spaceKey = false;
 		break;
-	case 101: // e
+	case 'e':
 		eKey = false;
 		break;
 	}
 }
 
-int selecionarObjeto() {
+unsigned int selecionarObjeto() {
 	glRenderMode(GL_SELECT);
 	glInitNames();
 	glPushName(0);
@@ -414,15 +417,27 @@ int selecionarObjeto() {
 	glLoadIdentity();
 	renderWorld();
 	glutSwapBuffers();
-	Sleep(100);
 	glPopMatrix();
-	//glFlush();
 	hits = glRenderMode(GL_RENDER);
-	return 0;
+	printf("%d hits\n", hits);
+	printf("selectBuffer[3] = %d\n", selectBuffer[3]);
+	unsigned int objSelecionado, menorDepth, menorDepthObj, menorDepthIndex = 1;
+	menorDepth = selectBuffer[1];
+	for (size_t i = 0; i < hits; i++)
+	{
+		unsigned int newDepth = selectBuffer[1 + i * 4];
+		if (newDepth < menorDepth) {
+			menorDepth = newDepth;
+			menorDepthIndex = 1 + i * 4;
+			menorDepthIndex = 1 + i * 4;
+		}
+	}
+	menorDepthObj = selectBuffer[menorDepthIndex + 2];
+	printf("menorDepthIndex = %d obj = %d\n", menorDepthIndex, menorDepthObj);
+	return menorDepthObj;
 }
 
 void desenharRaycast() {
-	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
 
 	//gluUnProject(mouseX, -mouseY, winZ, Mmodelview, Mprojection, viewport, &objX2, &objY2, &objZ2);
 
@@ -450,19 +465,19 @@ void mouse(int button, int state, int x, int y)
 			lClick = true;
 			lClickX = x;
 			lClickY = y;
-			selecionarObjeto();
-			desenharRaycast();
+			idSelecionado = selecionarObjeto();
+			//desenharRaycast();
 		}
 	}
 
 	if (button == 2) // right click
-	{ 
+	{
 		if (state == GLUT_DOWN) {
 			rClick = true;
 			lastX = rClickX = x;
 			lastY = rClickY = y;
 		}
-		else 
+		else
 		{
 			rClick = false;
 			mouseMovedX = 0;
@@ -476,7 +491,7 @@ void mouse(int button, int state, int x, int y)
 		// Scroll wheel muda nRange quando em projeção ortogonal e muda angleV quando em projeção perspectiva
 		if (button == 3)
 		{
-			if (projMode) 
+			if (projMode)
 			{
 				if (nRange > 0.5) nRange -= 0.5;
 			}
@@ -484,7 +499,7 @@ void mouse(int button, int state, int x, int y)
 		}
 		else
 		{
-			if (projMode) 
+			if (projMode)
 			{
 				nRange += 0.5;
 			}
@@ -1365,10 +1380,47 @@ void renderInterface() {
 		glPopMatrix();
 	}
 
+	if (idSelecionado)
+	{
+		draw2dBox(245, h-380, 370, h-600);
+		snprintf(buffer, sizeof buffer,
+			"tipo = %d\n"
+			"x = %.1f\n"
+			"y = %.1f\n"
+			"z = %.1f\n"
+			"r = %.1f\n"
+			"g = %.1f\n"
+			"b = %.1f\n"
+			"rx = %.1f°\n"
+			"ry = %.1f°\n"
+			"rz = %.1f°\n",
+			objSelecionado.tipo,
+			objSelecionado.x,
+			objSelecionado.y,
+			objSelecionado.z,
+			objSelecionado.r,
+			objSelecionado.g,
+			objSelecionado.b,
+			objSelecionado.rX,
+			objSelecionado.rY,
+			objSelecionado.rZ);
+
+		glColor3f(1.0, 1.0, 1.0);
+		renderString(250, h - 400, GLUT_BITMAP_9_BY_15, buffer);
+
+		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
+		glPushMatrix();
+		glBegin(GL_LINES);
+		glVertex3f(winX, winY, winZ);
+		glVertex3f(370, (h - 600), 0);
+		glEnd();
+		glPopMatrix();
+	}
 
 }
 
 void renderWorld() {
+	int nome = 1;
 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
 
@@ -1446,8 +1498,6 @@ void renderWorld() {
 	xyzLines();
 	renderCoords();
 
-	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
-
 	ObjetoCompostoOpenGL objetoAtual = Objetos[forma - 1];
 
 	if (!strcmp(objetoAtual.nome, "SistemaSolar"))
@@ -1470,10 +1520,16 @@ void renderWorld() {
 
 	for (ObjetoOpenGL parte : objetoAtual.partes)
 	{
-		GLint nome = 1;
+		globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 		glColor3f(parte.r, parte.g, parte.b);
 		glLoadName(nome);
-		nome++;
+		parte.id = nome;
+		++nome;
+		if (idSelecionado == parte.id) {
+			glColor3f(0, 1, 0);
+			glDisable(GL_LIGHTING);
+			objSelecionado = parte;
+		}
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
 		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
