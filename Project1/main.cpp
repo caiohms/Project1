@@ -8,10 +8,13 @@
 #include <vector>
 using namespace std;
 
+void renderWorld();
+
 class ObjetoOpenGL
 {
 public:
 	int tipo;
+	bool selected;
 	double x, y, z;
 	float rX, rY, rZ, r, g, b;
 	std::vector<float> params;
@@ -53,7 +56,10 @@ GLdouble Mmodelview[16];
 GLdouble Mprojection[16];
 GLint viewport[4];
 
-GLfloat nRange = 120.0f, angleV = 70.0f, fAspect;
+GLuint selectBuffer[3000];
+GLint hits;
+
+GLfloat nRange = 120.0f, angleV = 70.0f, fAspect, vNear = 0.001, vFar = 10000;
 GLfloat angleX = 0.0f, angleY = 0.0f, angleZ = 0.0f; // Arrow keys user-defined rotation
 GLfloat rotX = 0.0f, rotY = 0.0f, rotZ = 0.0f; // The final global rotation (with added animation)
 
@@ -160,12 +166,14 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 
 void initGL() {
 	//glutSetOption(GLUT_GEOMETRY_VISUALIZE_NORMALS, 1);
+
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
 	//glEnable(GL_DEPTH_TEST);   // Enable depth testing for z-culling
 	glDepthFunc(GL_LEQUAL);    // Set the type of depth-test
 	glShadeModel(GL_SMOOTH);     // Enable smooth shading
 	//glEnable(GL_NORMALIZE);
+	glSelectBuffer(3000, selectBuffer);
 }
 
 float toRadians(float angle) {
@@ -393,6 +401,26 @@ void processNormalKeysUp(unsigned char key, int x, int y) {
 	}
 }
 
+int selecionarObjeto() {
+	glRenderMode(GL_SELECT);
+	glInitNames();
+	glPushName(0);
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluPickMatrix(mouseX, viewport[3] - mouseY, 5.0, 5.0, viewport);
+	gluPerspective(angleV, fAspect, vNear, vFar);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	renderWorld();
+	glutSwapBuffers();
+	Sleep(100);
+	glPopMatrix();
+	//glFlush();
+	hits = glRenderMode(GL_RENDER);
+	return 0;
+}
+
 void desenharRaycast() {
 	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
 
@@ -402,7 +430,7 @@ void desenharRaycast() {
 	gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
 	printf("%f, %f, %f\n", (float)objX, (float)objY, (float)objZ);
 
- 	std::vector<float> p = { xPos, yPos, zPos, (float)objX, (float)objY, (float)objZ };
+	std::vector<float> p = { xPos, yPos, zPos, (float)objX, (float)objY, (float)objZ };
 
 	ObjetoOpenGL objReta(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, p);
 
@@ -417,23 +445,24 @@ void mouse(int button, int state, int x, int y)
 
 	if (button == 0) // left click
 	{
-		// Coordinates are saved and clicked state is used by other functions
-		lClick = true;
-		lClickX = x;
-		lClickY = y;
-
-		desenharRaycast();
+		// Coordenadas são salvas e estado clicado é usado por outras funções
+		if (state == GLUT_DOWN) {
+			lClick = true;
+			lClickX = x;
+			lClickY = y;
+			selecionarObjeto();
+			desenharRaycast();
+		}
 	}
 
 	if (button == 2) // right click
-	{
-		if (state == GLUT_DOWN)
-		{
+	{ 
+		if (state == GLUT_DOWN) {
 			rClick = true;
 			lastX = rClickX = x;
 			lastY = rClickY = y;
 		}
-		else
+		else 
 		{
 			rClick = false;
 			mouseMovedX = 0;
@@ -447,19 +476,19 @@ void mouse(int button, int state, int x, int y)
 		// Scroll wheel muda nRange quando em projeção ortogonal e muda angleV quando em projeção perspectiva
 		if (button == 3)
 		{
-			if (projMode) {
+			if (projMode) 
+			{
 				if (nRange > 0.5) nRange -= 0.5;
 			}
-			else
-				if (angleV > 0.5) angleV -= 0.5;
+			else if (angleV > 0.5) angleV -= 0.5;
 		}
 		else
 		{
-			if (projMode) {
+			if (projMode) 
+			{
 				nRange += 0.5;
 			}
-			else
-				if (angleV < 179.5) angleV += 0.5;
+			else if (angleV < 179.5) angleV += 0.5;
 		}
 	}
 }
@@ -711,7 +740,7 @@ void loadWorldPerspProj() {
 	fAspect = w / h;
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(angleV, fAspect, .001, 10000);
+	gluPerspective(angleV, fAspect, vNear, vFar);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 }
@@ -1343,18 +1372,9 @@ void renderWorld() {
 
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
 
-	glGetFloatv(GL_MODELVIEW_MATRIX, matrizModelview);
-
-	//printf(
-	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n"
-	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n"
-	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n"
-	//	"| %2.1f | %2.1f | %2.1f | %2.1f | \n\n",
-	//	matrizModelview[0], matrizModelview[1], matrizModelview[2], matrizModelview[3],
-	//	matrizModelview[4], matrizModelview[5], matrizModelview[6], matrizModelview[7],
-	//	matrizModelview[8], matrizModelview[9], matrizModelview[10], matrizModelview[11],
-	//	matrizModelview[12], matrizModelview[13], matrizModelview[14], matrizModelview[15]
-	//);
+	glGetDoublev(GL_MODELVIEW_MATRIX, Mmodelview);
+	glGetDoublev(GL_PROJECTION_MATRIX, Mprojection);
+	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	front ? glPolygonMode(GL_FRONT, GL_LINE) : glPolygonMode(GL_FRONT, GL_FILL);
 	back ? glPolygonMode(GL_BACK, GL_LINE) : glPolygonMode(GL_BACK, GL_FILL);
@@ -1409,9 +1429,9 @@ void renderWorld() {
 
 	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
 	glColor3f(1, 1, 1);
+
 	glutSolidSphere((696340.0 / 1000000.0), 100, 100);
 	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
-
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 
@@ -1450,7 +1470,10 @@ void renderWorld() {
 
 	for (ObjetoOpenGL parte : objetoAtual.partes)
 	{
+		GLint nome = 1;
 		glColor3f(parte.r, parte.g, parte.b);
+		glLoadName(nome);
+		nome++;
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
 		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
@@ -1502,11 +1525,6 @@ void renderWorld() {
 		glPopMatrix();
 	}
 
-	
-	GLdouble objX, objY, objZ;
-	glGetDoublev(GL_MODELVIEW_MATRIX, Mmodelview);
-	glGetDoublev(GL_PROJECTION_MATRIX, Mprojection);
-	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
 
@@ -1514,7 +1532,6 @@ void renderWorld() {
 
 	//glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
 	//gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
-	//printf("%f, %f, %f\n", (float)objX, (float)objY, (float)objZ);
 
 }
 
@@ -1567,7 +1584,7 @@ int main(int argc, char** argv) {
 	int RESOLUTION_INITIAL_HEIGHT = glutGet(GLUT_SCREEN_HEIGHT) - 120;
 
 	glutInitWindowSize(RESOLUTION_INITIAL_WIDTH, RESOLUTION_INITIAL_HEIGHT);     // Set the window's initial width & height
-	glutInitWindowPosition(840, 40);   // Position the window's initial top-left corner
+	glutInitWindowPosition(780, 40);   // Position the window's initial top-left corner
 	glutCreateWindow("");          // Create window with the given title
 	glutDisplayFunc(render);          // Register callback handler for window re-paint event
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
