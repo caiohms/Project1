@@ -34,6 +34,10 @@ public:
 	}
 
 	ObjetoOpenGL() {};
+
+	void changeX(double x) {
+		this->x = x;
+	}
 };
 
 class ObjetoCompostoOpenGL
@@ -44,12 +48,13 @@ public:
 
 	ObjetoCompostoOpenGL(const char Nome[50], std::vector<ObjetoOpenGL> partes = {}) {
 		memcpy(nome, Nome, sizeof(char) * 50);
-
 	}
+
+	ObjetoCompostoOpenGL() {}
 };
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.03";
+char ver[8] = "1.04";
 
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
@@ -92,6 +97,7 @@ upKey, leftKey, rightKey, downKey, pgDnKey,
 pgUpKey, rClick, lClick, escKey, speedModifier;
 
 int
+parteIdx = 0,
 forma = 1,
 frame = 0,
 mouseX, // live mouse position X axis updated every frame
@@ -104,20 +110,21 @@ mouseMovedX, // camera movement mouse variables
 mouseMovedY, 
 lastX, 
 lastY, 
-idSelecionado; 
+idSelecionado,
+parteSelecionada; 
 
-float 
-rAngle, 
-time, 
-time1, 
-framerate, 
-frametime, 
-lasttime, 
-calculatedFramerate, 
+float
+rAngle,
+time,
+time1,
+framerate,
+frametime,
+lasttime,
+calculatedFramerate,
 calculatedFrametime,
-versorVisionX, 
-versorVisionY, 
-versorVisionZ, 
+versorVisionX,
+versorVisionY,
+versorVisionZ,
 visionMag,
 cameraPitch = 0.0f,
 cameraYaw = 270.0f,
@@ -131,8 +138,18 @@ xPos = 0,
 yPos = 0,
 zPos = 20,
 speed = 1.0f,
+deltaPosicaoX = 0.0f,
+deltaPosicaoY = 0.0f,
+deltaPosicaoZ = 0.0f,
+objMovX,
+objMovY,
+objMovZ,
+lastObjMovX,
+lastObjMovY,
+lastObjMovZ,
 cameraSensitivity = 0.1f;
 
+ObjetoCompostoOpenGL objetoCompostoAtual;
 ObjetoOpenGL objSelecionado;
 
 GLdouble 
@@ -148,7 +165,7 @@ Mprojection[16];
 std::vector<ObjetoCompostoOpenGL> Objetos;
 std::vector<ObjetoOpenGL> Retas;
 
-void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
+void displayFileLoad(const char* fileName) // na versao 2015 (char * fileName)
 {
 	/*	Formato arquivo:
 	numObjects
@@ -195,6 +212,10 @@ void DisplayFileRead(const char* fileName) // na versao 2015 (char * fileName)
 		Objetos.push_back(novoObjeto);
 	}
 	inStream.close();				 // fecha o arquivo
+}
+
+void displayFileSave(const char* filename) {
+
 }
 
 //void update(/*int value*/) {
@@ -317,6 +338,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	case 'r':  // r
 		Retas.clear();
 		idSelecionado = 0;
+		parteSelecionada = 0;
 		rAngle = 0;
 		angleX = 0;
 		angleY = 0;
@@ -419,6 +441,7 @@ void processNormalKeys(unsigned char key, int x, int y) {
 	if (key >= 48 && key <= 57) // Mudança de objeto, desselecionar objeto
 	{
 		idSelecionado = 0;
+		parteSelecionada = 0;
 	}
 }
 
@@ -452,12 +475,11 @@ unsigned int selecionarObjeto() {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluPickMatrix(mouseX, viewport[3] - mouseY, 5.0, 5.0, viewport);
+	gluPickMatrix(mouseX, viewport[3] - mouseY, 1.0, 1.0, viewport);
 	gluPerspective(angleV, fAspect, zNear, zFar);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	renderWorld();
-	//glutSwapBuffers();
 	glPopMatrix();
 	hits = glRenderMode(GL_RENDER);
 	if (!hits)
@@ -466,7 +488,7 @@ unsigned int selecionarObjeto() {
 	}
 	printf("%d hits\n", hits);
 	printf("selectBuffer[3] = %d\n", selectBuffer[3]);
-	unsigned int objSelecionado, menorDepth, menorDepthObj, menorDepthIndex = 1;
+	unsigned int menorDepth, menorDepthObj, menorDepthIndex = 1;
 	menorDepth = selectBuffer[1];
 	for (size_t i = 0; i < hits; i++)
 	{
@@ -505,17 +527,30 @@ void mouse(int button, int state, int x, int y)
 	if (button == 0) // left click
 	{
 		// Coordenadas são salvas e estado clicado é usado por outras funções
+		if (rClick) return;
 		if (state == GLUT_DOWN) {
+			
 			lClick = true;
-			lClickX = x;
-			lClickY = y;
+			lastX = lClickX = x;
+			lastY = lClickY = y;
 			idSelecionado = selecionarObjeto();
+			if (idSelecionado == 0) parteSelecionada = 0;
+			if (idSelecionado > 6) 
+				parteSelecionada = idSelecionado;
+			printf("%d idSelecionado\n", idSelecionado);
 			//desenharRaycast();
+		}
+		else
+		{
+			lClick = false;
+			mouseMovedX = 0;
+			mouseMovedY = 0;
 		}
 	}
 
 	if (button == 2) // right click
 	{
+		if (lClick) return;
 		if (state == GLUT_DOWN) {
 			rClick = true;
 			lastX = rClickX = x;
@@ -555,38 +590,83 @@ void mouse(int button, int state, int x, int y)
 void mouseMovement(int x, int y) {
 	mouseX = x;
 	mouseY = y;
+	mouseMovedX = x - lastX; // mouse position changes
+	mouseMovedY = y - lastY;
+	lastX = x;
+	lastY = y;
+
+	if (!lClick) glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
+	gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
+
+	objMovX = objX;
+	objMovY = objY;
+	objMovZ = objZ;
+
+	deltaPosicaoX = objX - lastObjMovX;
+	deltaPosicaoY = objY - lastObjMovY;
+	deltaPosicaoZ = objZ - lastObjMovZ;
+
+	lastObjMovX = objX;
+	lastObjMovY = objY;
+	lastObjMovZ = objZ;
+	
 
 	if (lClick)
 	{
-
+		switch ((int)(idSelecionado))
+		{
+		default:
+			break;
+		case 1:
+			// Usuario selecionou movimentação no eixo X
+			Objetos[forma - 1].partes[parteIdx].x += deltaPosicaoX * 10;
+			break;
+		case 2:
+			// Usuario selecionou movimentação no eixo Y
+			Objetos[forma - 1].partes[parteIdx].y += deltaPosicaoY * 10;
+			break;
+		case 3:
+			// Usuario selecionou movimentação no eixo Z
+			Objetos[forma - 1].partes[parteIdx].z += deltaPosicaoZ * 10;
+			break;
+		case 4:
+			// Usuario selecionou movimentação no eixo de rotação rX
+			Objetos[forma - 1].partes[parteIdx].rX += deltaPosicaoY * 10;
+			break;
+		case 5:
+			// Usuario selecionou movimentação no eixo de rotação rY
+			Objetos[forma - 1].partes[parteIdx].rY += deltaPosicaoY * 10;
+			break;
+		case 6:
+			// Usuario selecionou movimentação no eixo de rotação rZ
+			Objetos[forma - 1].partes[parteIdx].rZ += deltaPosicaoY * 10;
+			break;
+		}
+		
+		
 	}
 
 	if (rClick)
 	{
-		mouseMovedX = x - lastX; // mouse position changes
-		mouseMovedY = y - lastY;
-		lastX = x;
-		lastY = y;
-
-		if (!escKey) // blocks camera movement when ESC menu is open
+		if (!escKey) // bloqueia movimentação da câmera quando o menu ESC é aberto
 		{
-			cameraPitch -= mouseMovedY * cameraSensitivity; // pitch and yaw change according to differences in mouse coordinates
+			cameraPitch -= mouseMovedY * cameraSensitivity; // pitch e yaw mudam de acorco com diferenças nas coordenadas do mouse
 			cameraYaw += mouseMovedX * cameraSensitivity;
 		}
 
-		if (cameraPitch > 80) cameraPitch = 80; // limiting pitch angle between -80 and 80
-		if (cameraPitch < -80) cameraPitch = -80;
+		if (cameraPitch > 85) cameraPitch = 85; // limitando pitch entre -85 and 85
+		if (cameraPitch < -85) cameraPitch = -85;
 
-		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw; // limiting yaw to (0, 360) interval
+		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw; // limitando yaw ao intervalo (0, 360)
 
-		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch)); // camera moves in a cylindrical coordiate system
+		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch)); // câmera se move em um sistema de coordenadas esféricas
 		lookingAtY = yPos + sin(toRadians(cameraPitch));
 		lookingAtZ = zPos + sin(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
 	}
 }
 
 void normalize2d(float x, float y, float* returnX, float* returnY) {
-	// funcao antiga mas deixarei para evitar quebrar o que ja esta funcionando
+	// funcao antiga mas deixarei para não ter que mexer no que ja esta funcionando
 	float magnitude = sqrt(pow(x, 2) + pow(y, 2));
 
 	*returnX = x / magnitude;
@@ -594,6 +674,7 @@ void normalize2d(float x, float y, float* returnX, float* returnY) {
 }
 
 void normalizarVetor(float v[], size_t s, float* vOut) {
+	// Recebe um vetor v[] com s-dimensional valores e retorna vetor unitário em vOut
 	float mag = 0;
 
 	float* nV = new float[s];
@@ -1225,35 +1306,32 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 }
 
-void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1, float lengthFactor = 1, float thicknessFactor = 1, bool pointy = 0) {////////////////////////
+void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {////////////////////////
 
-	float finalLength = sizeFactor * lengthFactor;
-	float finalThickness = sizeFactor * thicknessFactor;
+	glRotatef(rx, 0.0f, 1.0f, 0.0f);
+	glRotatef(rz, 0.0f, 0.0f, 1.0f); aa
+	glRotatef(ry, 0.0f, 1.0f, 0.0f);
 
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
 	glLoadName(4);
-	glRotatef(rx, 0.0f, 0.0f, 1.0f);
-	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
-	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
-	glTranslatef(0, -20 * finalLength, 0);
-	glRotatef(90, 0.0f, 0.0f, 1.0f);
+	glPushMatrix();
+	glRotatef(-90, 0.0f, 1.0f, 0.0f);
+	glutSolidTorus(0.2, 10, 30, 30);
+	glPopMatrix();
 
 	glColor3f(0.0, 1.0, 0.0); // Green - Y
 	glLoadName(5);
-	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
-	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
-	glTranslatef(0, -20 * finalLength, 0);
+	glPushMatrix();
+	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	glutSolidTorus(0.2, 10, 30, 30);
+	glPopMatrix();
 
 	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
 	glLoadName(6);
-	glRotatef(90, 1.0f, 0.0f, 0.0f);
-	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
-	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + pointy * 10, 10, 1);
-	glTranslatef(0, -20 * finalLength, 0);
-	glRotatef(-90, 1.0f, 0.0f, 0.0f);
+	glPushMatrix();
+	glRotatef(0, 0.0f, 0.0f, 0.0f);
+	glutSolidTorus(0.2, 10, 30, 30);
+	glPopMatrix();
 
 }
 
@@ -1445,6 +1523,7 @@ void renderInterface() {
 
 	if (forma == 5 && winZ < 1)
 	{
+		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
 		glPushMatrix();
 		glBegin(GL_LINES);
 		glVertex3f(w / 2, 0, 0);
@@ -1454,7 +1533,7 @@ void renderInterface() {
 		glPopMatrix();
 	}
 
-	if (idSelecionado)
+	if (parteSelecionada)
 	{
 		draw2dBox(245, h-380, 370, h-600);
 		snprintf(buffer, sizeof buffer,
@@ -1497,8 +1576,8 @@ void renderInterface() {
 }
 
 void renderWorld() {
-	int nome = 1;
-
+	int nome, i = 0;
+	nome = 7;
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
 
 	front ? glPolygonMode(GL_FRONT, GL_LINE) : glPolygonMode(GL_FRONT, GL_FILL);
@@ -1577,9 +1656,9 @@ void renderWorld() {
 	//xyzLines();
 	//renderCoords();
 
-	ObjetoCompostoOpenGL objetoAtual = Objetos[forma - 1];
+	objetoCompostoAtual = Objetos[forma - 1];
 
-	if (!strcmp(objetoAtual.nome, "SistemaSolar"))
+	if (!strcmp(objetoCompostoAtual.nome, "SistemaSolar"))
 	{
 		glColor3f(1.0, 1.0, 1.0);
 		renderString3D(57.91, 18.01, 0.0, GLUT_BITMAP_9_BY_15, "Mercurio");
@@ -1597,18 +1676,18 @@ void renderWorld() {
 		glPopMatrix();
 	}
 
-	for (ObjetoOpenGL parte : objetoAtual.partes)
+	for (ObjetoOpenGL parte : objetoCompostoAtual.partes)
 	{
 		globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 		glColor3f(parte.r, parte.g, parte.b);
 		glLoadName(nome);
 		parte.id = nome;
-		++nome;
-		if (idSelecionado == parte.id) {
-			
+		
+		if (parteSelecionada == parte.id) {
 			glDisable(GL_LIGHTING);
 			objSelecionado = parte;
-
+			parteIdx = i;
+			
 			if (!moving && rotX == 0 && rotY == 0 && rotZ == 0)
 			{
 				float x = xPos - parte.x;
@@ -1616,21 +1695,27 @@ void renderWorld() {
 				float z = zPos - parte.z;
 				float vo[3], v[3] = { x,y,z };
 				normalizarVetor(v, 3, vo);
+
 				glPushMatrix();
 				glTranslatef(xPos - vo[0] * 5, yPos - vo[1] * 5, zPos - vo[2] * 5);
 				xyzLines3d(.005, 5, 100, 1);
-
 				glPopMatrix();
-			}
-			
 
+				glPushMatrix();
+				glTranslatef(parte.x, parte.y, parte.z);
+				rotationTorus3d(parte.rX, parte.rY, parte.rZ);
+				glPopMatrix();
+
+			}
 			glColor3f(0, 0.5, 0);
+			glLoadName(nome); // Refaz glLoadName senão o nome é definido pelo último glLoadName dentro de xyzLines3d()
 		}
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
-		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
-		glRotatef(parte.rY, 0.0f, 1.0f, 0.0f);
+		glRotatef(parte.rX, 0.0f, 1.0f, 0.0f);
 		glRotatef(parte.rZ, 0.0f, 0.0f, 1.0f);
+		glRotatef(parte.rY, 0.0f, 1.0f, 0.0f);
+
 		switch (parte.tipo)
 		{
 		case 0:
@@ -1675,15 +1760,15 @@ void renderWorld() {
 			break;
 		}
 		glPopMatrix();
+		i++;
+		nome++;
 	}
-
 
 	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
 
 	//gluUnProject(mouseX, -mouseY, winZ, Mmodelview, Mprojection, viewport, &objX2, &objY2, &objZ2);
 
-	//glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
-	//gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
+
 
 }
 
@@ -1714,7 +1799,6 @@ void render() {
 	glutSwapBuffers();
 	glutPostRedisplay();
 
-	lClick = false;
 	speed = calculatedFrametime * (0.1284f - 0.02839 * speedModifier);
 }
 
@@ -1726,7 +1810,7 @@ void reshape(GLsizei w, GLsizei h) {
 }
 
 int main(int argc, char** argv) {
-	DisplayFileRead("df.txt");              // se estiver aqui, le somente uma vez
+	displayFileLoad("df.txt");              // se estiver aqui, le somente uma vez
 
 	glutInit(&argc, argv);            // Initialize GLUT
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_MULTISAMPLE);
