@@ -14,6 +14,7 @@ char title[128] = "OpenGL-PUCPR - Formas geométricas";
 char ver[8] = "1.05";
 
 void renderWorld();
+void draw2dBox(int, int, int, int);
 void draw2dBoxFilled(int, int, int, int);
 void renderStrokeString(float, float, const char*, float, bool);
 void resumeButton();
@@ -65,7 +66,6 @@ class Botao
 public:
 	char nome[50];
 	int w, h;
-	//void * f;
 	std::function<void()> f;
 
 	Botao(const char* Nome, int W, int H, void F()) {
@@ -77,8 +77,9 @@ public:
 
 	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick) {
 
-		float buttonMidX = w / 2;
-		float buttonMidY = h / 2;
+		float
+			buttonMidX = w / 2,
+			buttonMidY = h / 2;
 
 		float leftX = x - buttonMidX;
 		float bottomY = y - buttonMidY;
@@ -88,17 +89,18 @@ public:
 		char buffer[15];
 		snprintf(buffer, sizeof(buffer), nome);
 
+		glPolygonMode(GL_FRONT, GL_FILL);
+
+		glColor3f(0.1, 0.1, 0.1);
+		draw2dBoxFilled(leftX, bottomY, rightX, topY);
+
 		if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
 		{
 			glColor3f(0.0, 1.0, 0.0);
-			draw2dBoxFilled(leftX, bottomY, rightX, topY);
+			draw2dBox(leftX, bottomY, rightX, topY);
 			if (lClick) f();
 		}
-		else
-		{
-			glColor3f(0.1, 0.1, 0.1);
-			draw2dBoxFilled(leftX, bottomY, rightX, topY);
-		}
+
 		glColor3f(1, 1, 1);
 		renderStrokeString(x + 9, bottomY + 9, buffer, 0.22, true);
 	}
@@ -114,7 +116,7 @@ public:
 
 	MenuEsc() {}
 
-	void addBotao(const char *Nome, void F()) {
+	void addBotao(const char* Nome, void F()) {
 		char nome[50];
 		strcpy_s(nome, Nome);
 		Botao b(Nome, bw, bh, F);
@@ -125,7 +127,7 @@ public:
 		for (size_t i = 0; i < botoes.size(); i++)
 		{
 			int top = (int)(windowH / 2) - 10 - botoes.size() * bh / 2; // Determina a menor posição Y, topo do primeiro botão
-			botoes[i].desenharBotao(windowW/2, top+(bh+10)*i, mouseX,windowH- mouseY, lClick);
+			botoes[i].desenharBotao(windowW / 2, top + (bh + 10) * i, mouseX, windowH - mouseY, lClick);
 		}
 	}
 
@@ -136,9 +138,6 @@ public:
 		this->addBotao("Continuar", resumeButton);
 	}
 };
-
-
-
 
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
@@ -1424,9 +1423,9 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {////////////////////////
 
-	//glRotatef(rz, 0.0f, 0.0f, 1.0f);
-	//glRotatef(rx, 1.0f, 0.0f, 0.0f);
-	//glRotatef(ry, 0.0f, 1.0f, 0.0f);
+	glRotatef(rx, 1.0f, 0.0f, 0.0f);
+	glRotatef(ry, 0.0f, 1.0f, 0.0f);
+	glRotatef(rz, 0.0f, 0.0f, 1.0f);
 
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
 	glLoadName(4);
@@ -1435,19 +1434,19 @@ void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {//////
 	glutSolidTorus(0.2, 10, 30, 30);
 	glPopMatrix();
 
-	//glColor3f(0.0, 1.0, 0.0); // Green - Y
-	//glLoadName(5);
-	//glPushMatrix();
-	//glRotatef(90, 1.0f, 0.0f, 0.0f);
-	//glutSolidTorus(0.2, 10, 30, 30);
-	//glPopMatrix();
+	glColor3f(0.0, 1.0, 0.0); // Green - Y
+	glLoadName(5);
+	glPushMatrix();
+	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	glutSolidTorus(0.2, 10, 30, 30);
+	glPopMatrix();
 
-	//glColor3f(0.0, 0.0, 1.0); // Blue - Z 
-	//glLoadName(6);
-	//glPushMatrix();
-	//glRotatef(0, 0.0f, 0.0f, 0.0f);
-	//glutSolidTorus(0.2, 10, 30, 30);
-	//glPopMatrix();
+	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
+	glLoadName(6);
+	glPushMatrix();
+	glRotatef(0, 0.0f, 0.0f, 0.0f);
+	glutSolidTorus(0.2, 10, 30, 30);
+	glPopMatrix();
 
 }
 
@@ -1460,33 +1459,33 @@ void renderCoords() {
 	renderString3D(0.0f, 1.0f, 20, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
-void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) {
-	float buttonMidX = buttonWidth / 2;
-	float buttonMidY = buttonHeight / 2;
-
-	float leftX = bx - buttonMidX;
-	float bottomY = by - buttonMidY;
-	float rightX = bx + buttonMidX;
-	float topY = by + buttonMidY;
-
-	char buffer[9];
-	snprintf(buffer, sizeof(buffer), text);
-
-	if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
-	{
-		glColor3f(0.0, 1.0, 0.0);
-		draw2dBoxFilled(leftX, bottomY, rightX, topY);
-		if (lClick) f();
-
-	}
-	else
-	{
-		glColor3f(0.1, 0.1, 0.1);
-		draw2dBoxFilled(leftX, bottomY, rightX, topY);
-	}
-	glColor3f(1, 1, 1);
-	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
-}
+//void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) {
+//	float buttonMidX = buttonWidth / 2;
+//	float buttonMidY = buttonHeight / 2;
+//
+//	float leftX = bx - buttonMidX;
+//	float bottomY = by - buttonMidY;
+//	float rightX = bx + buttonMidX;
+//	float topY = by + buttonMidY;
+//
+//	char buffer[9];
+//	snprintf(buffer, sizeof(buffer), text);
+//
+//	if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
+//	{
+//		glColor3f(0.0, 1.0, 0.0);
+//		draw2dBoxFilled(leftX, bottomY, rightX, topY);
+//		if (lClick) f();
+//
+//	}
+//	else
+//	{
+//		glColor3f(0.1, 0.1, 0.1);
+//		draw2dBoxFilled(leftX, bottomY, rightX, topY);
+//	}
+//	glColor3f(1, 1, 1);
+//	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
+//}
 
 void resumeButton() {
 	escKey = false;
@@ -1838,9 +1837,9 @@ void renderWorld() {
 		}
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
-		//glRotatef(parte.rZ, 0.0f, 0.0f, 1.0f);
 		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
 		glRotatef(parte.rY, 0.0f, 1.0f, 0.0f);
+		glRotatef(parte.rZ, 0.0f, 0.0f, 1.0f);
 
 		switch (parte.tipo)
 		{
