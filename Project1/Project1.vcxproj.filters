@@ -23,5 +23,8 @@
     <Text Include="df.txt">
       <Filter>Source Files</Filter>
     </Text>
+    <Text Include="df2.txt">
+      <Filter>Source Files</Filter>
+    </Text>
   </ItemGroup>
 </Project>

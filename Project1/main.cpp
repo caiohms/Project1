@@ -6,9 +6,20 @@
 #include <fstream>		    // File library
 #include <iostream>
 #include <vector>
+#include <functional>
+
 using namespace std;
 
+char title[128] = "OpenGL-PUCPR - Formas geométricas";
+char ver[8] = "1.05";
+
 void renderWorld();
+void draw2dBoxFilled(int, int, int, int);
+void renderStrokeString(float, float, const char*, float, bool);
+void resumeButton();
+void displayFileLoad();
+void displayFileSave();
+void quit();
 
 class ObjetoOpenGL
 {
@@ -33,11 +44,7 @@ public:
 		params = Parametros;
 	}
 
-	ObjetoOpenGL() {};
-
-	void changeX(double x) {
-		this->x = x;
-	}
+	ObjetoOpenGL() {}
 };
 
 class ObjetoCompostoOpenGL
@@ -46,35 +53,112 @@ public:
 	char nome[50];
 	std::vector<ObjetoOpenGL> partes;
 
-	ObjetoCompostoOpenGL(const char Nome[50], std::vector<ObjetoOpenGL> partes = {}) {
-		memcpy(nome, Nome, sizeof(char) * 50);
+	ObjetoCompostoOpenGL(char Nome[50], std::vector<ObjetoOpenGL> partes = {}) {
+		strcpy_s(nome, Nome);
 	}
 
 	ObjetoCompostoOpenGL() {}
 };
 
-char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.04";
+class Botao
+{
+public:
+	char nome[50];
+	int w, h;
+	//void * f;
+	std::function<void()> f;
+
+	Botao(const char* Nome, int W, int H, void F()) {
+		strcpy_s(nome, Nome);
+		w = W;
+		h = H;
+		f = F;
+	}
+
+	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick) {
+
+		float buttonMidX = w / 2;
+		float buttonMidY = h / 2;
+
+		float leftX = x - buttonMidX;
+		float bottomY = y - buttonMidY;
+		float rightX = x + buttonMidX;
+		float topY = y + buttonMidY;
+
+		char buffer[15];
+		snprintf(buffer, sizeof(buffer), nome);
+
+		if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
+		{
+			glColor3f(0.0, 1.0, 0.0);
+			draw2dBoxFilled(leftX, bottomY, rightX, topY);
+			if (lClick) f();
+		}
+		else
+		{
+			glColor3f(0.1, 0.1, 0.1);
+			draw2dBoxFilled(leftX, bottomY, rightX, topY);
+		}
+		glColor3f(1, 1, 1);
+		renderStrokeString(x + 9, bottomY + 9, buffer, 0.22, true);
+	}
+
+};
+
+class MenuEsc
+{
+public:
+	std::vector<Botao> botoes;
+	int bw = 300;
+	int bh = 40;
+
+	MenuEsc() {}
+
+	void addBotao(const char *Nome, void F()) {
+		char nome[50];
+		strcpy_s(nome, Nome);
+		Botao b(Nome, bw, bh, F);
+		this->botoes.push_back(b);
+	}
+
+	void desenharMenu(int windowW, int windowH, int mouseX, int mouseY, bool lClick) {
+		for (size_t i = 0; i < botoes.size(); i++)
+		{
+			int top = (int)(windowH / 2) - 10 - botoes.size() * bh / 2; // Determina a menor posição Y, topo do primeiro botão
+			botoes[i].desenharBotao(windowW/2, top+(bh+10)*i, mouseX,windowH- mouseY, lClick);
+		}
+	}
+
+	void inicializarMenu() {
+		this->addBotao("Sair", quit);
+		this->addBotao("Carregar", displayFileLoad);
+		this->addBotao("Salvar", displayFileSave);
+		this->addBotao("Continuar", resumeButton);
+	}
+};
+
+
+
 
 //int RESOLUTION_INITIAL_WIDTH = 1280;
 //int RESOLUTION_INITIAL_HEIGHT = 720;
- 
+
 GLint viewport[4];
 
 GLuint selectBuffer[1000];
 GLint hits;
 
-GLfloat 
-nRange = 120.0f, 
-angleV = 70.0f, 
-fAspect, 
-zNear = 0.01, 
+GLfloat
+nRange = 120.0f,
+angleV = 70.0f,
+fAspect,
+zNear = 0.01,
 zFar = 10000,
-angleX = 0.0f, 
-angleY = 0.0f, 
+angleX = 0.0f,
+angleY = 0.0f,
 angleZ = 0.0f, // Arrow keys user-defined rotation
-rotX = 0.0f, 
-rotY = 0.0f, 
+rotX = 0.0f,
+rotY = 0.0f,
 rotZ = 0.0f, // The final global rotation (with added animation)
 mouseZ;
 
@@ -107,11 +191,11 @@ rClickY, // mouse right click Y position
 lClickX, // mouse left click X position updates on left click (no dragging)
 lClickY, // mouse left click Y position
 mouseMovedX, // camera movement mouse variables
-mouseMovedY, 
-lastX, 
-lastY, 
+mouseMovedY,
+lastX,
+lastY,
 idSelecionado,
-parteSelecionada; 
+parteSelecionada;
 
 float
 rAngle,
@@ -149,10 +233,7 @@ lastObjMovY,
 lastObjMovZ,
 cameraSensitivity = 0.1f;
 
-ObjetoCompostoOpenGL objetoCompostoAtual;
-ObjetoOpenGL objSelecionado;
-
-GLdouble 
+GLdouble
 winX,
 winY,
 winZ,
@@ -162,20 +243,24 @@ objZ,
 Mmodelview[16],
 Mprojection[16];
 
+ObjetoCompostoOpenGL objetoCompostoAtual;
+ObjetoOpenGL objSelecionado;
+
 std::vector<ObjetoCompostoOpenGL> Objetos;
 std::vector<ObjetoOpenGL> Retas;
+MenuEsc menuEsc;
 
-void displayFileLoad(const char* fileName) // na versao 2015 (char * fileName)
+const char filename[] = "df2.txt";
+
+void displayFileLoad()
 {
 	/*	Formato arquivo:
+	xPos yPos zPos lookingAtX lookingAtY lookingAtZ cameraPitch cameraYaw;
 	numObjects
 	nome
 	numPartes
-	tipo x y z r g b numParametros
-	parametro[0]             // Por exemplo aresta do cubo, raio/comprimento de um cilindro
-	parametro[...]
-	parametro[numParametros] // Ultimo item do objeto individual
-	nome
+	tipo x y z r g b numParametros	parametro[0] parametro[...] parametro[numParametros]  (Por exemplo aresta do cubo, raio/comprimento de um cilindro)
+	nome (Próximo objeto)
 	...
 	*/
 	int numObjects, numPartes;
@@ -183,11 +268,13 @@ void displayFileLoad(const char* fileName) // na versao 2015 (char * fileName)
 	int tipo, numParametros;
 	float x, y, z, rX, rY, rZ, r, g, b;
 	std::vector<float> parametros;  // cores dos objetos
+	Objetos.clear();
 
 	fstream inStream;
-	inStream.open(fileName, ios::in); // abre o arquivo
+	inStream.open(filename, ios::in); // abre o arquivo
 	if (inStream.fail()) return;      //falha na abertura do arquivo
 	cout << "Abertura do arquivo com sucesso ..." << endl;
+	inStream >> xPos >> yPos >> zPos >> lookingAtX >> lookingAtY >> lookingAtZ >> cameraPitch >> cameraYaw;
 	inStream >> numObjects;			  // le primeira linha do arquivo, numero de objetos 
 	cout << numObjects << " Objetos na cena ..." << endl;
 
@@ -214,8 +301,28 @@ void displayFileLoad(const char* fileName) // na versao 2015 (char * fileName)
 	inStream.close();				 // fecha o arquivo
 }
 
-void displayFileSave(const char* filename) {
-
+void displayFileSave() {
+	cout << "File save iniciado" << endl;
+	ofstream file;
+	file.open(filename);
+	file << xPos << ' ' << yPos << ' ' << zPos << ' ' << lookingAtX << ' ' << lookingAtY << ' ' << lookingAtZ << ' ' << cameraPitch << ' ' << cameraYaw << endl;
+	file << Objetos.size() << endl;
+	cout << "Salvando " << Objetos.size() << " objetos compostos." << endl;
+	for (ObjetoCompostoOpenGL o : Objetos)
+	{
+		cout << "Objeto " << o.nome << " Possui " << o.partes.size() << " partes" << endl;
+		file << o.nome << endl << o.partes.size() << endl;
+		for (ObjetoOpenGL p : o.partes)
+		{
+			file << p.tipo << ' ' << p.x << ' ' << p.y << ' ' << p.z << ' ' << p.rX << ' ' << p.rY << ' ' << p.rZ << ' ' << p.r << ' ' << p.g << ' ' << p.b << ' ' << p.params.size() << ' ';
+			for (float param : p.params)
+			{
+				file << param << ' ';
+			}
+			file << endl;
+		}
+	}
+	file.close();
 }
 
 //void update(/*int value*/) {
@@ -303,6 +410,15 @@ void processSpecialKeys(int key, int x, int y) {
 	case GLUT_KEY_F11:
 		printf("Alternado entre Windowed/Fullscreen");
 		glutFullScreenToggle();
+		break;
+	case GLUT_KEY_F1:
+		printf("Carregando arquivo...");
+		displayFileLoad();
+		break;
+
+	case GLUT_KEY_F2:
+		printf("Salvando arquivo...");
+		displayFileSave();
 		break;
 	}
 }
@@ -529,13 +645,13 @@ void mouse(int button, int state, int x, int y)
 		// Coordenadas são salvas e estado clicado é usado por outras funções
 		if (rClick) return;
 		if (state == GLUT_DOWN) {
-			
+
 			lClick = true;
 			lastX = lClickX = x;
 			lastY = lClickY = y;
 			idSelecionado = selecionarObjeto();
 			if (idSelecionado == 0) parteSelecionada = 0;
-			if (idSelecionado > 6) 
+			if (idSelecionado > 6)
 				parteSelecionada = idSelecionado;
 			printf("%d idSelecionado\n", idSelecionado);
 			//desenharRaycast();
@@ -609,7 +725,7 @@ void mouseMovement(int x, int y) {
 	lastObjMovX = objX;
 	lastObjMovY = objY;
 	lastObjMovZ = objZ;
-	
+
 
 	if (lClick)
 	{
@@ -642,8 +758,8 @@ void mouseMovement(int x, int y) {
 			Objetos[forma - 1].partes[parteIdx].rZ += deltaPosicaoY * 10;
 			break;
 		}
-		
-		
+
+
 	}
 
 	if (rClick)
@@ -1284,7 +1400,7 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	glRotatef(-90, 0.0f, 0.0f, 1.0f);
 	cilindro(0.02 * finalThickness, 20 * finalLength, 10);
 	glTranslatef(0, 20 * finalLength, 0);
-	cone(0.1 * finalThickness, 0.4 * finalLength + (pointy * 10*sizeFactor), 10, 1);
+	cone(0.1 * finalThickness, 0.4 * finalLength + (pointy * 10 * sizeFactor), 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(90, 0.0f, 0.0f, 1.0f);
 
@@ -1309,8 +1425,8 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {////////////////////////
 
 	//glRotatef(rz, 0.0f, 0.0f, 1.0f);
-	glRotatef(rx, 1.0f, 0.0f, 0.0f);
-	glRotatef(ry, 0.0f, 1.0f, 0.0f);
+	//glRotatef(rx, 1.0f, 0.0f, 0.0f);
+	//glRotatef(ry, 0.0f, 1.0f, 0.0f);
 
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
 	glLoadName(4);
@@ -1319,19 +1435,19 @@ void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {//////
 	glutSolidTorus(0.2, 10, 30, 30);
 	glPopMatrix();
 
-	glColor3f(0.0, 1.0, 0.0); // Green - Y
-	glLoadName(5);
-	glPushMatrix();
-	glRotatef(90, 1.0f, 0.0f, 0.0f);
-	glutSolidTorus(0.2, 10, 30, 30);
-	glPopMatrix();
+	//glColor3f(0.0, 1.0, 0.0); // Green - Y
+	//glLoadName(5);
+	//glPushMatrix();
+	//glRotatef(90, 1.0f, 0.0f, 0.0f);
+	//glutSolidTorus(0.2, 10, 30, 30);
+	//glPopMatrix();
 
-	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
-	glLoadName(6);
-	glPushMatrix();
-	glRotatef(0, 0.0f, 0.0f, 0.0f);
-	glutSolidTorus(0.2, 10, 30, 30);
-	glPopMatrix();
+	//glColor3f(0.0, 0.0, 1.0); // Blue - Z 
+	//glLoadName(6);
+	//glPushMatrix();
+	//glRotatef(0, 0.0f, 0.0f, 0.0f);
+	//glutSolidTorus(0.2, 10, 30, 30);
+	//glPopMatrix();
 
 }
 
@@ -1376,6 +1492,12 @@ void resumeButton() {
 	escKey = false;
 }
 
+void quit() {
+	glutDestroyWindow(glutGetWindow());
+	exit(0);
+
+}
+
 void escapeMenu(int screenX, int screenY) {
 
 	int buttonWidth = 200;
@@ -1390,7 +1512,11 @@ void escapeMenu(int screenX, int screenY) {
 	glEnd();*/
 
 	glColor3f(1.0, 1.0, 0.0);
-	drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
+	//Botao resume("Continue", buttonWidth, buttonHeight, resumeButton);
+	//resume.desenharBotao(screenX / 4, screenY / 2, mouseX, mouseY, lClick);
+
+	menuEsc.desenharMenu(screenX, screenY, mouseX, mouseY, lClick);
+	//drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
 
 	//todo
 	//	dynamic button generation
@@ -1482,7 +1608,7 @@ void renderInterface() {
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n",
-		
+
 		Mmodelview[0], Mmodelview[1], Mmodelview[2], Mmodelview[3],
 		Mmodelview[4], Mmodelview[5], Mmodelview[6], Mmodelview[7],
 		Mmodelview[8], Mmodelview[9], Mmodelview[10], Mmodelview[11],
@@ -1535,7 +1661,7 @@ void renderInterface() {
 
 	if (parteSelecionada)
 	{
-		draw2dBox(245, h-380, 370, h-600);
+		draw2dBox(245, h - 380, 370, h - 600);
 		snprintf(buffer, sizeof buffer,
 			"tipo = %d\n"
 			"x = %.1f\n"
@@ -1601,7 +1727,7 @@ void renderWorld() {
 	versorVisionZ = (visionZ = (lookingAtZ - zPos)) / visionMag;
 
 	//--------------------------------------------------------------------
-	GLfloat luzAmbiente[4] = { 0.0, 0.0, 0.0, 1.0 };
+	GLfloat luzAmbiente[4] = { 0.05, 0.05, 0.05, 1.0 };
 	GLfloat luzDifusa[4] = { 0.9, 0.9, 0.9, 1.0 };	   // "cor" 
 	GLfloat luzEspecular[4] = { 1.0, 1.0, 1.0, 1.0 };// "brilho" 
 
@@ -1682,12 +1808,12 @@ void renderWorld() {
 		glColor3f(parte.r, parte.g, parte.b);
 		glLoadName(nome);
 		parte.id = nome;
-		
+
 		if (parteSelecionada == parte.id) {
 			glDisable(GL_LIGHTING);
 			objSelecionado = parte;
 			parteIdx = i;
-			
+
 			if (!moving && rotX == 0 && rotY == 0 && rotZ == 0)
 			{
 				float x = xPos - parte.x;
@@ -1810,7 +1936,8 @@ void reshape(GLsizei w, GLsizei h) {
 }
 
 int main(int argc, char** argv) {
-	displayFileLoad("df.txt");              // se estiver aqui, le somente uma vez
+	displayFileLoad();              // se estiver aqui, le somente uma vez
+	menuEsc.inicializarMenu();
 
 	glutInit(&argc, argv);            // Initialize GLUT
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_MULTISAMPLE);
