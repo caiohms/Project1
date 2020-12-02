@@ -13,11 +13,14 @@ using namespace std;
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
 char ver[8] = "1.2.2";
 
+const char filename[] = "df.txt";
+
 void renderWorld();
 void draw2dBox(int, int, int, int);
 void draw2dBoxFilled(int, int, int, int);
 void renderStrokeString(float, float, const char*, float, bool, void*);
 void renderString(float, float, void*, const char*);
+void keyboardTextInput(unsigned char, int, int);
 void resumeButton();
 void displayFileLoad();
 void displayFileSave();
@@ -33,7 +36,8 @@ public:
 	float rX, rY, rZ, r, g, b; /* Rotação e cor */
 	std::vector<float> params; /* Vetor de parâmetros adicionais */
 
-	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float RX, float RY, float RZ, float R, float G, float B, std::vector<float> Parametros) {
+	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float RX, float RY, float RZ, float R, float G, float B, std::vector<float> Parametros)
+	{
 		tipo = Tipo;
 		x = X;
 		y = Y;
@@ -61,8 +65,10 @@ public:
 	char nome[50];
 	std::vector<ObjetoOpenGL> partes;
 
-	ObjetoCompostoOpenGL(char Nome[50], std::vector<ObjetoOpenGL> partes = {}) {
+	ObjetoCompostoOpenGL(char Nome[50], std::vector<ObjetoOpenGL> Partes = {})
+	{
 		strcpy_s(nome, Nome);
+		partes = Partes;
 	}
 
 	ObjetoCompostoOpenGL() {}
@@ -76,14 +82,16 @@ public:
 	int w, h; /* Posição do botão em relação à borda esquerda superior da tela*/
 	std::function<void()> f; /* Método armazenado executado on click */
 
-	Botao(const char* Nome, int W, int H, void F()) {
+	Botao(const char* Nome, int W, int H, void F())
+	{
 		strcpy_s(nome, Nome);
 		w = W;
 		h = H;
 		f = F;
 	}
 
-	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick, bool strokeString = true, void* font = GLUT_STROKE_MONO_ROMAN) {
+	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick, bool strokeString = true, void* font = GLUT_STROKE_MONO_ROMAN)
+	{
 
 		/* Floats definidos abaixo posicionam o botão com centro na coordenada x,y da viewport */
 		float
@@ -134,14 +142,16 @@ public:
 
 	MenuEsc() {}
 
-	void addBotao(const char* Nome, void F()) {
+	void addBotao(const char* Nome, void F())
+	{
 		char nome[50];
 		strcpy_s(nome, Nome);
 		Botao b(Nome, bw, bh, F);
 		this->botoes.push_back(b);
 	}
 
-	void desenharMenu(int windowW, int windowH, int mouseX, int mouseY, bool lClick) {
+	void desenharMenu(int windowW, int windowH, int mouseX, int mouseY, bool lClick)
+	{
 		for (size_t i = 0; i < botoes.size(); i++)
 		{
 			int top = (int)(windowH / 2) - 10 - botoes.size() * bh / 2; // Determina a menor posição Y, topo do primeiro botão
@@ -149,7 +159,8 @@ public:
 		}
 	}
 
-	void inicializarMenu() {
+	void inicializarMenu()
+	{
 		this->addBotao("Sair", quit);
 		this->addBotao("Carregar", displayFileLoad);
 		this->addBotao("Salvar", displayFileSave);
@@ -266,8 +277,6 @@ MenuEsc menuEsc;
 
 std::string dialogString = "";
 std::string inputString = "";
-
-const char filename[] = "df2.txt";
 
 void displayFileLoad()
 {
@@ -471,7 +480,7 @@ void processNormalKeys(unsigned char key, int x, int y)
 	switch (key)
 	{
 	case 27: /* esc */
-		escKey = escKey ? false : true;
+		escKey = !escKey;
 	case 'r':
 		Retas.clear();
 		idSelecionado = 0;
@@ -531,47 +540,47 @@ void processNormalKeys(unsigned char key, int x, int y)
 		cface ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
 		break;
 	case 't':
-		depthTest = depthTest ? false : true;
+		depthTest = !depthTest;
 		depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
 		break;
 	case 'p': // p projection mode
-		projMode = projMode ? false : true;
+		projMode = !projMode;
 		break;
 	case 'i':
 		globalIllumination = globalIllumination ? false : true;
 		break;
 	case 'l':
-		shadeModel = shadeModel ? false : true;
+		shadeModel = !shadeModel;
 		shadeModel ? glShadeModel(GL_SMOOTH) : glShadeModel(GL_FLAT);
 		break;
-	case '1': // 1 
+	case '1': 
 		forma = 1;
 		break;
-	case '2': // 2
+	case '2': 
 		forma = 2;
 		break;
-	case '3': // 3
+	case '3':
 		forma = 3;
 		break;
-	case '4': // 4
+	case '4': 
 		forma = 4;
 		break;
-	case '5': // 5
+	case '5': 
 		forma = 5;
 		break;
-	case '6': // 6
+	case '6': 
 		forma = 6;
 		break;
-	case '7': // 7
+	case '7': 
 		forma = 7;
 		break;
-	case '8': // 8
+	case '8': 
 		forma = 8;
 		break;
-	case '9': // 9
+	case '9': 
 		forma = 9;
 		break;
-	case '0': // 0
+	case '0': 
 		forma = 10;
 		break;
 	}
@@ -584,7 +593,8 @@ void processNormalKeys(unsigned char key, int x, int y)
 
 void processNormalKeysUp(unsigned char key, int x, int y)
 {
-	switch (key) {
+	switch (key)
+	{
 	case 'w':
 		wKey = false;
 		break;
@@ -656,12 +666,12 @@ void desenharRaycast()
 
 	Retas.emplace_back(objReta);
 
-	printf("%d\n", Retas.size());
+	//printf("%d\n", Retas.size());
 }
 
 void mouse(int button, int state, int x, int y)
 {
-	printf("%d Button %s At %d %d\n", button, (state == GLUT_DOWN) ? "Down" : "Up", x, y);
+	printf("%d button %s at %d %d\n", button, (state == GLUT_DOWN) ? "Down" : "Up", x, y);
 
 	if (button == 0) // left click
 	{
@@ -669,12 +679,11 @@ void mouse(int button, int state, int x, int y)
 		if (rClick) return;
 		if (state == GLUT_DOWN)
 		{
-
 			lClick = true;
 			lastX = lClickX = x;
 			lastY = lClickY = y;
 
-			if (!(x > 245 && x < 400 && y > 380 && y < 600 && parteSelecionada))
+			if (!(x > 245 && x < 400 && y > 380 && y < 600 && parteSelecionada || escKey))
 			{
 				// Mouse não está em cima do menu do objeto, e pode selecionar novos objetos
 				idSelecionado = selecionarObjeto();
@@ -1061,11 +1070,11 @@ void loadWorldOrthoProj()
 
 	if (w <= h)
 	{
-		glOrtho(-nRange, nRange, -nRange * h / w, nRange * h / w, -nRange, nRange);
+		glOrtho(-nRange, nRange, -nRange * h / w, nRange * h / w, -zFar, zFar);
 	}
 	else
 	{
-		glOrtho(-nRange * w / h, nRange * w / h, -nRange, nRange, -nRange, nRange);
+		glOrtho(-nRange * w / h, nRange * w / h, -nRange, nRange, -zFar, zFar);
 	}
 }
 
@@ -1596,20 +1605,43 @@ void escapeMenu(int screenX, int screenY)
 }
 
 bool textInput = false;
-bool addObjInterface = false;
+bool textInterface = false;
+bool _adding_obj = false;
+bool _editing_r = false;
+bool _editing_g = false;
+bool _editing_b = false;
 bool enterKey = false;
 int inputIndex = 0;
 int _add_tipoObj = 0;
 float _add_r, _add_g, _add_b;
 std::vector<float> _add_parametros;
 
+void enterInputMode() 
+{
+	textInterface = true;
+	textInput = true;
+	glutSetKeyRepeat(GLUT_KEY_REPEAT_ON);
+	glutKeyboardFunc(keyboardTextInput);
+}
+
+void exitInputMode() 
+{
+	textInput = false;
+	textInterface = false;
+	enterKey = false;
+	inputIndex = 0;
+	_add_tipoObj = 0;
+	_add_parametros.clear();
+
+	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+	glutKeyboardFunc(processNormalKeys);
+}
+
 void keyboardTextInput(unsigned char key, int x, int y)
 {
 	if (textInput)
 	{
 		// Estamos no modo textInput, o teclado se comporta como um editor de texto
-		glutSetKeyRepeat(GLUT_KEY_REPEAT_ON);
-		glutKeyboardFunc(keyboardTextInput);
 
 		if (key == '\b') // Quando BACKSPACE é pressionado
 		{
@@ -1619,15 +1651,7 @@ void keyboardTextInput(unsigned char key, int x, int y)
 
 		if (key == '27') // Quando ESC é pressionado aborta o processo limpando todas as variaveis
 		{
-			textInput = false;
-			addObjInterface = false;
-			enterKey = false;
-			inputIndex = 0;
-			_add_tipoObj = 0;
-			_add_parametros.clear();
-
-			glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
-			glutKeyboardFunc(processNormalKeys);
+			exitInputMode();
 			return;
 		}
 
@@ -1643,8 +1667,7 @@ void keyboardTextInput(unsigned char key, int x, int y)
 	else
 	{
 		// Se não estamos no modo textInput, o callback e o comportamento do teclado volta ao normal
-		glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
-		glutKeyboardFunc(processNormalKeys);
+		exitInputMode();
 	}
 }
 
@@ -1658,16 +1681,16 @@ float processarCor(float input)
 
 void _addObj()
 {
+	_adding_obj = true;
+
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
 
 	std::vector<string> nomeParametros;
 
-	addObjInterface = true;
-	textInput = true;
+	enterInputMode();
 
 	dialogString = "Digite o tipo de objeto (1-10): ";
-	glutKeyboardFunc(keyboardTextInput);
 
 	if (inputIndex > 0)
 	{
@@ -1771,16 +1794,8 @@ void _addObj()
 		// objeto criado e adicionado na origem do sis. coordenadas
 		ObjetoOpenGL novoObj(_add_tipoObj, 0.0, 0.0, 0.0, 0.0f, 0.0f, 0.0f, _add_r, _add_g, _add_b, _add_parametros);
 		Objetos[forma - 1].partes.emplace_back(novoObj);
-
-		textInput = false;
-		addObjInterface = false;
-		enterKey = false;
-		inputIndex = 0;
-		_add_tipoObj = 0;
-		_add_parametros.clear();
-
-		glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
-		glutKeyboardFunc(processNormalKeys);
+		_adding_obj = false;
+		exitInputMode();
 	}
 }
 
@@ -1817,19 +1832,76 @@ void _resetZ()
 	Objetos[forma - 1].partes[parteIdx].z = 0;
 }
 
-void _resetR() 
+void _editR() //--------------------------
 {
-	Objetos[forma - 1].partes[parteIdx].r = 0;
+	_editing_r = true;
+	enterInputMode();
+	dialogString = "Digite a cor Red (float 0-1)(int 0-255): ";
+
+	if (inputIndex == 0)
+	{
+		if (enterKey)
+		{
+			_add_r = processarCor(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else
+	{
+		Objetos[forma - 1].partes[parteIdx].r = _add_r; /* Modifica a cor editando o objeto diretamente */
+		_editing_r = false;
+		exitInputMode();
+	}		
 }
 
-void _resetG()
+void _editG()
 {
-	Objetos[forma - 1].partes[parteIdx].g = 0;
+	_editing_g = true;
+	enterInputMode();
+	dialogString = "Digite a cor Green (float 0-1)(int 0-255): ";
+
+	if (inputIndex == 0)
+	{
+		if (enterKey)
+		{
+			_add_g = processarCor(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else
+	{
+		Objetos[forma - 1].partes[parteIdx].g = _add_g; /* Modifica a cor editando o objeto diretamente */
+		_editing_g = false;
+		exitInputMode();
+	}
 }
 
-void _resetB()
+void _editB()
 {
-	Objetos[forma - 1].partes[parteIdx].b = 0;
+	_editing_b = true;
+	enterInputMode();
+	dialogString = "Digite a cor Blue (float 0-1)(int 0-255): ";
+
+	if (inputIndex == 0)
+	{
+		if (enterKey)
+		{
+			_add_b = processarCor(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else
+	{
+		Objetos[forma - 1].partes[parteIdx].b = _add_b; /* Modifica a cor editando o objeto diretamente */
+		_editing_b = false;
+		exitInputMode();
+	}
 }
 
 void _resetRx()
@@ -1979,16 +2051,20 @@ void renderInterface()
 	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
 	glPopMatrix();
 
-	if (forma == 5 && winZ < 1)
+	
+	if (forma == 5)
 	{
-		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
-		glPushMatrix();
-		glBegin(GL_LINES);
-		glVertex3f(w / 2, 0, 0);
-		glVertex3f(winX, winY, winZ);
-		glEnd();
-		renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Terra");
-		glPopMatrix();
+		gluProject(150.0, 18.0, 0.0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
+		if (winZ < 1)
+		{
+			glPushMatrix();
+			glBegin(GL_LINES);
+			glVertex2f(w / 2, 0);
+			glVertex2f(winX, winY);
+			glEnd();
+			renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Terra");
+			glPopMatrix();
+		}		
 	}
 
 	Botao addObj("Adicionar Objeto", 250, 40, _addObj);
@@ -2008,43 +2084,43 @@ void renderInterface()
 			glPopMatrix();
 		}
 		glColor3f(0.02, 0.02, 0.02);
-		draw2dBoxFilled(245, h - 380, 400, h - 600); // Desenha caixa para as informações do objeto
+		draw2dBoxFilled(245, h - 380, 410, h - 600); // Desenha caixa para as informações do objeto
 		glColor3f(1.0, 0.8, 0.0);
-		draw2dBox(245, h - 380, 400, h - 600); // Desenha caixa para as informações do objeto
+		draw2dBox(245, h - 380, 410, h - 600); // Desenha caixa para as informações do objeto
 
-		Botao prevTipo("<", 18, 13, _prevTipo);
-		prevTipo.desenharBotao(360, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
-		Botao nextTipo(">", 18, 13, _nextTipo);
-		nextTipo.desenharBotao(384, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		//Botao prevTipo("<", 18, 13, _prevTipo);
+		//prevTipo.desenharBotao(370, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		//Botao nextTipo(">", 18, 13, _nextTipo);
+		//nextTipo.desenharBotao(394, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 		Botao resetX("Reset", 50, 13, _resetX);
-		resetX.desenharBotao(370, h - 413, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		resetX.desenharBotao(380, h - 413, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 		Botao resetY("Reset", 50, 13, _resetY);
-		resetY.desenharBotao(370, h - 429, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		resetY.desenharBotao(380, h - 429, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 		Botao resetZ("Reset", 50, 13, _resetZ);
-		resetZ.desenharBotao(370, h - 445, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
-		Botao resetR("Reset", 50, 13, _resetR);
-		resetR.desenharBotao(370, h - 461, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
-		Botao resetG("Reset", 50, 13, _resetG);
-		resetG.desenharBotao(370, h - 477, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
-		Botao resetB("Reset", 50, 13, _resetB);
-		resetB.desenharBotao(370, h - 493, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		resetZ.desenharBotao(380, h - 445, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetR("Edit", 50, 13, _editR);
+		resetR.desenharBotao(380, h - 461, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetG("Edit", 50, 13, _editG);
+		resetG.desenharBotao(380, h - 477, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetB("Edit", 50, 13, _editB);
+		resetB.desenharBotao(380, h - 493, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 		Botao resetRx("Reset", 50, 13, _resetRx);
-		resetRx.desenharBotao(370, h - 509, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		resetRx.desenharBotao(380, h - 509, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 		Botao resetRy("Reset", 50, 13, _resetRy);
-		resetRy.desenharBotao(370, h - 525, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		resetRy.desenharBotao(380, h - 525, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 		Botao resetRz("Reset", 50, 13, _resetRz);
-		resetRz.desenharBotao(370, h - 541, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
-		Botao remove("Remover", 145, 13, _remove);
-		remove.desenharBotao(322, h - 557, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		resetRz.desenharBotao(380, h - 541, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao remove("Remover", 155, 15, _remove);
+		remove.desenharBotao(329, h - 557, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 
 		snprintf(buffer, sizeof buffer,
 			"tipo = %d\n"
 			"x = %.1f\n"
 			"y = %.1f\n"
 			"z = %.1f\n"
-			"r = %.1f\n"
-			"g = %.1f\n"
-			"b = %.1f\n"
+			"r = %.4f\n"
+			"g = %.4f\n"
+			"b = %.4f\n"
 			"rx = %.1f°\n"
 			"ry = %.1f°\n"
 			"rz = %.1f°\n",
@@ -2064,9 +2140,24 @@ void renderInterface()
 		renderString(250, h - 401, GLUT_BITMAP_9_BY_15, buffer);
 	}
 
-	if (addObjInterface)
+	if (textInterface)
 	{
-		_addObj();
+		if (_adding_obj)
+		{
+			_addObj();
+		}
+		else if (_editing_r)
+		{
+			_editR();
+		}
+		else if (_editing_g)
+		{
+			_editG();
+		}
+		else if (_editing_b)
+		{
+			_editB();
+		}
 		glColor3f(0.1, 0.1, 0.1);
 		draw2dBoxFilled(180, h - 50, 600, h - 150); // Desenha caixa para as informações do objeto
 		glColor3f(1.0, 0.8, 0.0);
