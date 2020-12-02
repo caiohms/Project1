@@ -1,9 +1,9 @@
-#include <windows.h>  // for MS Windows
-#include <GL\freeglut.h>  // GLUT, include glu.h and gl.h
+#include <windows.h>  
+#include <GL\freeglut.h>  
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <string>
-#include <fstream>		    // File library
+#include <fstream>		    
 #include <iostream>
 #include <vector>
 #include <functional>
@@ -11,12 +11,13 @@
 using namespace std;
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.05";
+char ver[8] = "1.2.2";
 
 void renderWorld();
 void draw2dBox(int, int, int, int);
 void draw2dBoxFilled(int, int, int, int);
-void renderStrokeString(float, float, const char*, float, bool);
+void renderStrokeString(float, float, const char*, float, bool, void*);
+void renderString(float, float, void*, const char*);
 void resumeButton();
 void displayFileLoad();
 void displayFileSave();
@@ -24,12 +25,13 @@ void quit();
 
 class ObjetoOpenGL
 {
+	/* Representa um objeto individual como um cubo, cone, teapot */
 public:
 	int tipo, id = 0;
-	bool selected;
-	double x, y, z;
-	float rX, rY, rZ, r, g, b;
-	std::vector<float> params;
+	//bool selected;
+	double x, y, z; /* Posição */
+	float rX, rY, rZ, r, g, b; /* Rotação e cor */
+	std::vector<float> params; /* Vetor de parâmetros adicionais */
 
 	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float RX, float RY, float RZ, float R, float G, float B, std::vector<float> Parametros) {
 		tipo = Tipo;
@@ -50,6 +52,11 @@ public:
 
 class ObjetoCompostoOpenGL
 {
+	/*
+	Representa um objeto composto, selecionável pelas teclas 0-9 no teclado.
+	Possui um nome em texto definido no displayfile e um vetor de partes do tipo ObjetoOpenGL que
+	compõem a cena.
+	*/
 public:
 	char nome[50];
 	std::vector<ObjetoOpenGL> partes;
@@ -63,10 +70,11 @@ public:
 
 class Botao
 {
+	/* Objeto Botão que o usuário pode clicar, executando um método F()*/
 public:
 	char nome[50];
-	int w, h;
-	std::function<void()> f;
+	int w, h; /* Posição do botão em relação à borda esquerda superior da tela*/
+	std::function<void()> f; /* Método armazenado executado on click */
 
 	Botao(const char* Nome, int W, int H, void F()) {
 		strcpy_s(nome, Nome);
@@ -75,18 +83,19 @@ public:
 		f = F;
 	}
 
-	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick) {
+	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick, bool strokeString = true, void* font = GLUT_STROKE_MONO_ROMAN) {
 
+		/* Floats definidos abaixo posicionam o botão com centro na coordenada x,y da viewport */
 		float
 			buttonMidX = w / 2,
-			buttonMidY = h / 2;
+			buttonMidY = h / 2,
+			leftX = x - buttonMidX,
+			bottomY = y - buttonMidY,
+			rightX = x + buttonMidX,
+			topY = y + buttonMidY;
 
-		float leftX = x - buttonMidX;
-		float bottomY = y - buttonMidY;
-		float rightX = x + buttonMidX;
-		float topY = y + buttonMidY;
 
-		char buffer[15];
+		char buffer[20];
 		snprintf(buffer, sizeof(buffer), nome);
 
 		glPolygonMode(GL_FRONT, GL_FILL);
@@ -94,21 +103,30 @@ public:
 		glColor3f(0.1, 0.1, 0.1);
 		draw2dBoxFilled(leftX, bottomY, rightX, topY);
 
-		if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
+		if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY)
 		{
+			/* Mouse sobre o botão? */
 			glColor3f(0.0, 1.0, 0.0);
-			draw2dBox(leftX, bottomY, rightX, topY);
-			if (lClick) f();
+			draw2dBox(leftX, bottomY, rightX, topY);  /* Desenha outline verde */
+			if (lClick) f(); /* Executa f() */
 		}
 
-		glColor3f(1, 1, 1);
-		renderStrokeString(x + 9, bottomY + 9, buffer, 0.22, true);
-	}
+		glColor3f(1, 1, 1); /* Texto branco */
 
+		if (strokeString)
+		{
+			renderStrokeString(x + 9, bottomY + 9, buffer, 0.22, true, font);
+		}
+		else
+		{
+			renderString(leftX + 5, bottomY + 1, font, buffer);
+		}
+	}
 };
 
 class MenuEsc
 {
+	/* Menu com opções que aparece quando o usuário aperta ESC */
 public:
 	std::vector<Botao> botoes;
 	int bw = 300;
@@ -138,9 +156,6 @@ public:
 		this->addBotao("Continuar", resumeButton);
 	}
 };
-
-//int RESOLUTION_INITIAL_WIDTH = 1280;
-//int RESOLUTION_INITIAL_HEIGHT = 720;
 
 GLint viewport[4];
 
@@ -172,7 +187,7 @@ back,
 cface,
 projMode,
 moving,
-globalIllumination = false,
+globalIllumination = true,
 depthTest = true,
 shadeModel = true,
 wKey, aKey, sKey, dKey, spaceKey, eKey, mKey,
@@ -249,6 +264,9 @@ std::vector<ObjetoCompostoOpenGL> Objetos;
 std::vector<ObjetoOpenGL> Retas;
 MenuEsc menuEsc;
 
+std::string dialogString = "";
+std::string inputString = "";
+
 const char filename[] = "df2.txt";
 
 void displayFileLoad()
@@ -277,7 +295,8 @@ void displayFileLoad()
 	inStream >> numObjects;			  // le primeira linha do arquivo, numero de objetos 
 	cout << numObjects << " Objetos na cena ..." << endl;
 
-	for (int i = 1; i <= numObjects; i++) { // leitura das demais linhas, ID dos objetos, posicao e cor
+	for (int i = 1; i <= numObjects; i++) // leitura das demais linhas, ID dos objetos, posicao e cor
+	{
 		inStream >> nome; // Recebe nome
 		ObjetoCompostoOpenGL novoObjeto(nome); // Cria objeto composto com nome recebido
 		inStream >> numPartes; // Recebe numero de partes que compoem o objeto
@@ -300,13 +319,15 @@ void displayFileLoad()
 	inStream.close();				 // fecha o arquivo
 }
 
-void displayFileSave() {
+void displayFileSave()
+{
 	cout << "File save iniciado" << endl;
 	ofstream file;
 	file.open(filename);
 	file << xPos << ' ' << yPos << ' ' << zPos << ' ' << lookingAtX << ' ' << lookingAtY << ' ' << lookingAtZ << ' ' << cameraPitch << ' ' << cameraYaw << endl;
 	file << Objetos.size() << endl;
 	cout << "Salvando " << Objetos.size() << " objetos compostos." << endl;
+
 	for (ObjetoCompostoOpenGL o : Objetos)
 	{
 		cout << "Objeto " << o.nome << " Possui " << o.partes.size() << " partes" << endl;
@@ -324,14 +345,8 @@ void displayFileSave() {
 	file.close();
 }
 
-//void update(/*int value*/) {
-//	rAngle += 0.2f * animate;
-//	if (rAngle > 360) rAngle -= 360;
-//	glutPostRedisplay(); // Inform GLUT that the display has changed
-//	/*glutTimerFunc(8, update, 0);*///Call update after each 25 millisecond
-//}
-
-void initGL() {
+void initGL()
+{
 	//glutSetOption(GLUT_GEOMETRY_VISUALIZE_NORMALS, 1);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
 	glClearDepth(1.0f);                   // Set background depth to farthest
@@ -342,7 +357,8 @@ void initGL() {
 	glSelectBuffer(100, selectBuffer);
 }
 
-float toRadians(float angle) {
+float toRadians(float angle)
+{
 	return angle * M_PI / 180;
 }
 
@@ -351,21 +367,22 @@ float toDegrees(float radianAngle)
 	return radianAngle / (M_PI / 180);
 }
 
-void renderString(float x, float y, void* font, const char* string) {
+void renderString(float x, float y, void* font, const char* string)
+{
 
 	glRasterPos2f(x, y);
 	glutBitmapString(font, (unsigned char*)string);
 }
 
-void renderString3D(float x, float y, float z, void* font, const char* string) {
+void renderString3D(float x, float y, float z, void* font, const char* string)
+{
 
 	glRasterPos3f(x, y, z);
 	glutBitmapString(font, (unsigned char*)string);
 }
 
-void renderStrokeString(float x, float y, const char* string, float scale, bool centered = false) {
-
-	void* font = GLUT_STROKE_MONO_ROMAN;
+void renderStrokeString(float x, float y, const char* string, float scale, bool centered = false, void* font = GLUT_STROKE_MONO_ROMAN)
+{
 	unsigned char* s = (unsigned char*)string;
 
 	if (centered)
@@ -385,7 +402,8 @@ void renderStrokeString(float x, float y, const char* string, float scale, bool 
 	}
 }
 
-void processSpecialKeys(int key, int x, int y) {
+void processSpecialKeys(int key, int x, int y)
+{
 	//printf("%d   -   %d, %d\n", key, x, y);
 	switch (key) {
 	case GLUT_KEY_LEFT:
@@ -422,8 +440,10 @@ void processSpecialKeys(int key, int x, int y) {
 	}
 }
 
-void processSpecialKeysUp(int key, int x, int y) {
-	switch (key) {
+void processSpecialKeysUp(int key, int x, int y)
+{
+	switch (key)
+	{
 	case GLUT_KEY_LEFT:
 		leftKey = false;
 		break;
@@ -445,12 +465,14 @@ void processSpecialKeysUp(int key, int x, int y) {
 	}
 }
 
-void processNormalKeys(unsigned char key, int x, int y) {
-	printf("%c   -   %d, %d\n", key, x, y);
-	switch (key) {
-	case 27:
+void processNormalKeys(unsigned char key, int x, int y)
+{
+	//printf("%c  -  %d, %d\n", key, x, y);
+	switch (key)
+	{
+	case 27: /* esc */
 		escKey = escKey ? false : true;
-	case 'r':  // r
+	case 'r':
 		Retas.clear();
 		idSelecionado = 0;
 		parteSelecionada = 0;
@@ -462,63 +484,63 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		rotY = 0;
 		rotZ = 0;
 		break;
-	case 110: // n
-		animate = animate ? false : true;
+	case 'n':
+		animate = !animate;
 		break;
-	case 120: // x
-		animateX = animateX ? false : true;
+	case 'x':
+		animateX = !animateX;
 		break;
-	case 121: // y
-		animateY = animateY ? false : true;
+	case 'y':
+		animateY = !animateY;
 		break;
-	case 122: // z
-		animateZ = animateZ ? false : true;
+	case 'z':
+		animateZ = !animateZ;
 		break;
-	case 119: // w
+	case 'w':
 		wKey = true;
 		break;
-	case 97: // a
+	case 'a':
 		aKey = true;
 		break;
-	case 115: // s
+	case 's':
 		sKey = true;
 		break;
-	case 100: // d
+	case 'd':
 		dKey = true;
 		break;
-	case 32: // space
+	case ' ':
 		spaceKey = true;
 		break;
-	case 101: // e
+	case 'e':
 		eKey = true;
 		break;
-	case 'v': // v
-		speedModifier = speedModifier ? false : true;
+	case 'v':
+		speedModifier = !speedModifier;
 		break;
-	case 109: // m
-		mKey = mKey ? false : true;
+	case 'm':
+		mKey = !mKey;
 		break;
-	case 102: // f front
-		front = front ? false : true;
+	case 'f':
+		front = !front;
 		break;
-	case 98: // b back
-		back = back ? false : true;
+	case 'b':
+		back = !back;
 		break;
-	case 99: // b back
-		cface = cface ? false : true;
+	case 'c':
+		cface = !cface;
 		cface ? glEnable(GL_CULL_FACE) : glDisable(GL_CULL_FACE);
 		break;
-	case 116:
+	case 't':
 		depthTest = depthTest ? false : true;
 		depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST);
 		break;
-	case 112: // p projection mode
+	case 'p': // p projection mode
 		projMode = projMode ? false : true;
 		break;
-	case 105:
+	case 'i':
 		globalIllumination = globalIllumination ? false : true;
 		break;
-	case 108:
+	case 'l':
 		shadeModel = shadeModel ? false : true;
 		shadeModel ? glShadeModel(GL_SMOOTH) : glShadeModel(GL_FLAT);
 		break;
@@ -553,14 +575,15 @@ void processNormalKeys(unsigned char key, int x, int y) {
 		forma = 10;
 		break;
 	}
-	if (key >= 48 && key <= 57) // Mudança de objeto, desselecionar objeto
+	if (key >= 48 && key <= 57) // Mudança de objeto, desselecionar objeto // 0 a 9
 	{
 		idSelecionado = 0;
 		parteSelecionada = 0;
 	}
 }
 
-void processNormalKeysUp(unsigned char key, int x, int y) {
+void processNormalKeysUp(unsigned char key, int x, int y)
+{
 	switch (key) {
 	case 'w':
 		wKey = false;
@@ -583,7 +606,8 @@ void processNormalKeysUp(unsigned char key, int x, int y) {
 	}
 }
 
-unsigned int selecionarObjeto() {
+unsigned int selecionarObjeto()
+{
 	glRenderMode(GL_SELECT);
 	glInitNames();
 	glPushName(0);
@@ -601,26 +625,26 @@ unsigned int selecionarObjeto() {
 	{
 		return 0;
 	}
-	printf("%d hits\n", hits);
-	printf("selectBuffer[3] = %d\n", selectBuffer[3]);
+	//printf("%d hits\n", hits);
+	//printf("selectBuffer[3] = %d\n", selectBuffer[3]);
 	unsigned int menorDepth, menorDepthObj, menorDepthIndex = 1;
 	menorDepth = selectBuffer[1];
 	for (size_t i = 0; i < hits; i++)
 	{
 		unsigned int newDepth = selectBuffer[1 + i * 4];
-		if (newDepth < menorDepth) {
+		if (newDepth < menorDepth)
+		{
 			menorDepth = newDepth;
 			menorDepthIndex = 1 + i * 4;
 		}
 	}
 	menorDepthObj = selectBuffer[menorDepthIndex + 2];
-	printf("menorDepthIndex = %d obj = %d\n", menorDepthIndex, menorDepthObj);
+	//printf("menorDepthIndex = %d obj = %d\n", menorDepthIndex, menorDepthObj);
 	return menorDepthObj;
 }
 
-void desenharRaycast() {
-
-	//gluUnProject(mouseX, -mouseY, winZ, Mmodelview, Mprojection, viewport, &objX2, &objY2, &objZ2);
+void desenharRaycast()
+{
 
 	glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
 	gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
@@ -643,16 +667,27 @@ void mouse(int button, int state, int x, int y)
 	{
 		// Coordenadas são salvas e estado clicado é usado por outras funções
 		if (rClick) return;
-		if (state == GLUT_DOWN) {
+		if (state == GLUT_DOWN)
+		{
 
 			lClick = true;
 			lastX = lClickX = x;
 			lastY = lClickY = y;
-			idSelecionado = selecionarObjeto();
-			if (idSelecionado == 0) parteSelecionada = 0;
-			if (idSelecionado > 6)
-				parteSelecionada = idSelecionado;
-			printf("%d idSelecionado\n", idSelecionado);
+
+			if (!(x > 245 && x < 400 && y > 380 && y < 600 && parteSelecionada))
+			{
+				// Mouse não está em cima do menu do objeto, e pode selecionar novos objetos
+				idSelecionado = selecionarObjeto();
+				if (idSelecionado == 0)
+				{
+					parteSelecionada = 0;
+				}
+				if (idSelecionado > 6)
+				{
+					parteSelecionada = idSelecionado;
+				}
+				//printf("%d idSelecionado\n", idSelecionado);
+			}
 			//desenharRaycast();
 		}
 		else
@@ -666,7 +701,8 @@ void mouse(int button, int state, int x, int y)
 	if (button == 2) // right click
 	{
 		if (lClick) return;
-		if (state == GLUT_DOWN) {
+		if (state == GLUT_DOWN)
+		{
 			rClick = true;
 			lastX = rClickX = x;
 			lastY = rClickY = y;
@@ -687,9 +723,15 @@ void mouse(int button, int state, int x, int y)
 		{
 			if (projMode)
 			{
-				if (nRange > 0.5) nRange -= 0.5;
+				if (nRange > 0.5)
+				{
+					nRange -= 0.5;
+				}
 			}
-			else if (angleV > 0.5) angleV -= 0.5;
+			else if (angleV > 0.5)
+			{
+				angleV -= 0.5;
+			}
 		}
 		else
 		{
@@ -697,12 +739,16 @@ void mouse(int button, int state, int x, int y)
 			{
 				nRange += 0.5;
 			}
-			else if (angleV < 179.5) angleV += 0.5;
+			else if (angleV < 179.5)
+			{
+				angleV += 0.5;
+			}
 		}
 	}
 }
 
-void mouseMovement(int x, int y) {
+void mouseMovement(int x, int y)
+{
 	mouseX = x;
 	mouseY = y;
 	mouseMovedX = x - lastX; // mouse position changes
@@ -710,7 +756,10 @@ void mouseMovement(int x, int y) {
 	lastX = x;
 	lastY = y;
 
-	if (!lClick) glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
+	if (!lClick)
+	{
+		glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
+	}
 	gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
 
 	objMovX = objX;
@@ -757,8 +806,6 @@ void mouseMovement(int x, int y) {
 			Objetos[forma - 1].partes[parteIdx].rZ += deltaPosicaoY * 10;
 			break;
 		}
-
-
 	}
 
 	if (rClick)
@@ -769,8 +816,14 @@ void mouseMovement(int x, int y) {
 			cameraYaw += mouseMovedX * cameraSensitivity;
 		}
 
-		if (cameraPitch > 85) cameraPitch = 85; // limitando pitch entre -85 and 85
-		if (cameraPitch < -85) cameraPitch = -85;
+		if (cameraPitch > 85)
+		{
+			cameraPitch = 85; // limitando pitch entre -85 and 85
+		}
+		if (cameraPitch < -85)
+		{
+			cameraPitch = -85;
+		}
 
 		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw; // limitando yaw ao intervalo (0, 360)
 
@@ -780,7 +833,8 @@ void mouseMovement(int x, int y) {
 	}
 }
 
-void normalize2d(float x, float y, float* returnX, float* returnY) {
+void normalize2d(float x, float y, float* returnX, float* returnY)
+{
 	// funcao antiga mas deixarei para não ter que mexer no que ja esta funcionando
 	float magnitude = sqrt(pow(x, 2) + pow(y, 2));
 
@@ -788,39 +842,33 @@ void normalize2d(float x, float y, float* returnX, float* returnY) {
 	*returnY = y / magnitude;
 }
 
-void normalizarVetor(float v[], size_t s, float* vOut) {
-	// Recebe um vetor v[] com s-dimensional valores e retorna vetor unitário em vOut
+void normalizarVetor(float v[], size_t s, float* vOut)
+{
+	// Recebe um vetor v[] s-dimensional e retorna vetor unitário em vOut
 	float mag = 0;
 
 	float* nV = new float[s];
 
-	for (size_t i = 0; i < s; i++)
+	for (size_t i = 0; i < s; i++) {
 		mag += pow(v[i], 2);
+	}
 
 	mag = sqrt(mag);
 
-	if (mag == 0) mag = 1;
+	if (mag == 0)
+	{
+		mag = 1;
+	}
 
 	for (size_t i = 0; i < s; i++)
+	{
 		nV[i] = v[i] / mag;
+	}
 
 	memcpy(vOut, nV, sizeof(1.0f) * s);
 
-	delete[] nV;
+	delete[] nV; // memory leak bizarro
 }
-
-//void Normaliza(float vector[3]) // normalização do vetor
-//{
-//	float length;
-//	//Cálculo do comprimento do vetor
-//	length = (float)sqrt(pow(vector[0], 2.0) + pow(vector[1], 2.0) + pow(vector[2], 2.0));
-//	// Evita divisão por zero
-//	if (length == 0.0f) length = 1.0f;
-//	// Divide cada elemento pelo comprimento do vetor
-//	vector[0] /= length;
-//	vector[1] /= length;
-//	vector[2] /= length;
-//}
 
 void calcNormal(float v[3][3], float out[3])
 {
@@ -866,7 +914,8 @@ void calcNormal(float v[3][3], float out[3])
 	//glEnd();
 }
 
-void movement() {
+void movement()
+{
 	float xN, zN;
 
 	if (escKey)
@@ -959,42 +1008,69 @@ void movement() {
 	}
 }
 
-float fps() {
+float fps()
+{
 	time = glutGet(GLUT_ELAPSED_TIME);
-	if (time - time1 > 1000) {
+
+	if (time - time1 > 1000)
+	{
 		framerate = frame * 1000.0 / (time - time1);
 		time1 = time;
 		frame = 0;
 	}
+
 	return framerate;
 }
 
-float ftime() {
+float ftime()
+{
 	time = glutGet(GLUT_ELAPSED_TIME);
 	frametime = time - lasttime;
 	lasttime = time;
 	return frametime;
 }
 
-void definirTitle() {
-	snprintf(title, sizeof title, " OpenGL-PUCPR - Formas geométricas - Caio Santos | versão %s %dx%d  %.1fFPS %.0fms ", ver, glutGet(GLUT_WINDOW_WIDTH), glutGet(GLUT_WINDOW_HEIGHT), calculatedFramerate, calculatedFrametime);
+void definirTitle()
+{
+	snprintf(
+		title,
+		sizeof title,
+		" OpenGL-PUCPR - Formas geométricas - Caio Santos | versão %s %dx%d  %.1fFPS %.0fms ",
+		ver,
+		glutGet(GLUT_WINDOW_WIDTH),
+		glutGet(GLUT_WINDOW_HEIGHT),
+		calculatedFramerate,
+		calculatedFrametime
+	);
+
 	glutSetWindowTitle(title);
 }
 
-void loadWorldOrthoProj() {
+void loadWorldOrthoProj()
+{
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
 
-	if (h == 0) h = 1;
+	if (h == 0)
+	{
+		h = 1;
+	}
+
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+
 	if (w <= h)
+	{
 		glOrtho(-nRange, nRange, -nRange * h / w, nRange * h / w, -nRange, nRange);
+	}
 	else
+	{
 		glOrtho(-nRange * w / h, nRange * w / h, -nRange, nRange, -nRange, nRange);
+	}
 }
 
-void loadWorldPerspProj() {
+void loadWorldPerspProj()
+{
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
 	fAspect = w / h;
@@ -1005,7 +1081,8 @@ void loadWorldPerspProj() {
 	glLoadIdentity();
 }
 
-void plano(float y, float size, int divisoes) {
+void plano(float y, float size, int divisoes)
+{
 	float xmin = -size;
 	float xmax = size;
 	float zmin = -size;
@@ -1029,14 +1106,16 @@ void plano(float y, float size, int divisoes) {
 	glEnd();
 }
 
-void reta(float xi, float yi, float zi, float xf, float yf, float zf) {
+void reta(float xi, float yi, float zi, float xf, float yf, float zf)
+{
 	glBegin(GL_LINES);
 	glVertex3f(xi, yi, zi);
 	glVertex3f(xf, yf, zf);
 	glEnd();
 }
 
-void cubo(float a) {
+void cubo(float a)
+{
 	//glColor3f(.5, 0.2, 0.1);
 	glBegin(GL_TRIANGLE_STRIP);
 	glVertex3f(-a / 2, a / 2, a / 2);
@@ -1068,7 +1147,8 @@ void cubo(float a) {
 	glEnd();
 }
 
-void cone(float radius, float height, int nLados, int divisoes) {
+void cone(float radius, float height, int nLados, int divisoes)
+{
 	if (!divisoes) return;
 
 	double passoRadius = radius / divisoes;
@@ -1133,11 +1213,20 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	glEnd();
 
 	glBegin(GL_QUADS); // LATERAL - RESTO
-	double xT, yT, zT, xB, yB, zB, lxT = 0, lyT = 0, lzT = 0, lxB = 0, lyB = 0, lzB = 0;
+	double
+		xT, yT, zT,
+		xB, yB, zB,
+		lxT = 0,
+		lyT = 0,
+		lzT = 0,
+		lxB = 0,
+		lyB = 0,
+		lzB = 0;
 
 	for (size_t i = 1; i < divisoes; i++)
 	{
 		firstLoop = true;
+
 		for (double angle = (2.0 * M_PI); angle >= 0; angle -= (2.0 * M_PI / nLados))
 		{
 			/* 1    3
@@ -1156,7 +1245,8 @@ void cone(float radius, float height, int nLados, int divisoes) {
 			yB = height - passoHeight * (i + 1);
 			zB = passoRadius * (i + 1) * cos(angle);
 
-			if (firstLoop) {
+			if (firstLoop)
+			{
 				firstLoop = false;
 				lxT = xT;
 				lyT = yT;
@@ -1193,8 +1283,8 @@ void cone(float radius, float height, int nLados, int divisoes) {
 	glEnd();
 }
 
-void cilindro(float radius, float height, int nLados) {
-
+void cilindro(float radius, float height, int nLados)
+{
 	double x, z;
 	//glColor3f(0.4, 0.9, 0);
 	glBegin(GL_TRIANGLE_FAN); // BASE
@@ -1219,7 +1309,6 @@ void cilindro(float radius, float height, int nLados) {
 
 	//glColor3f(0.2, 0.2, 0.7);
 	glBegin(GL_TRIANGLE_STRIP); // LATERAL
-
 	for (double angle = (2.0 * M_PI); angle >= 0.0; angle -= (2.0 * M_PI / nLados))
 	{
 		x = radius * sin(angle);
@@ -1230,7 +1319,8 @@ void cilindro(float radius, float height, int nLados) {
 	glEnd();
 }
 
-void tube(float innerRadius, float height, float thickness, int nLados) {
+void tube(float innerRadius, float height, float thickness, int nLados)
+{
 	float outerRadius = innerRadius + thickness;
 	double x, z, xi, zi, xo, zo;
 
@@ -1287,8 +1377,8 @@ void tube(float innerRadius, float height, float thickness, int nLados) {
 	glEnd();
 }
 
-void comboTubes(float innerRadius, float height, float thickness, int nLados) {
-
+void comboTubes(float innerRadius, float height, float thickness, int nLados)
+{
 	glTranslatef(0.0, -height / 2, 0.0);
 	tube(innerRadius, height, thickness, nLados);
 	glTranslatef(0.0, height / 2, 0.0);
@@ -1353,29 +1443,28 @@ void tetraHedro()
 	glEnd();
 }
 
-void draw2dBox(int bx, int by, int ux, int uy) {
-
+void draw2dBox(int bx, int by, int ux, int uy)
+{
 	glBegin(GL_LINE_LOOP);
 	glVertex2i(bx, by);
 	glVertex2i(ux, by);
 	glVertex2i(ux, uy);
 	glVertex2i(bx, uy);
 	glEnd();
-
 }
 
-void draw2dBoxFilled(int bx, int by, int ux, int uy) {
-
+void draw2dBoxFilled(int bx, int by, int ux, int uy)
+{
 	glBegin(GL_POLYGON);
 	glVertex2i(bx, by);
 	glVertex2i(ux, by);
 	glVertex2i(ux, uy);
 	glVertex2i(bx, uy);
 	glEnd();
-
 }
 
-void xyzLines() {
+void xyzLines()
+{
 	glBegin(GL_LINES);
 	glColor3f(1.0, 0.0, 0.0); // Red - X
 	glVertex3f(0.0, 0.0, 0.0);
@@ -1389,8 +1478,8 @@ void xyzLines() {
 	glEnd();
 }
 
-void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFactor = 1, bool pointy = 0) {
-
+void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFactor = 1, bool pointy = 0)
+{
 	float finalLength = sizeFactor * lengthFactor;
 	float finalThickness = sizeFactor * thicknessFactor;
 
@@ -1418,11 +1507,10 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 	cone(0.1 * finalThickness, 0.4 * finalLength + (pointy * 10 * sizeFactor), 10, 1);
 	glTranslatef(0, -20 * finalLength, 0);
 	glRotatef(-90, 1.0f, 0.0f, 0.0f);
-
 }
 
-void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {////////////////////////
-
+void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1)
+{
 	glRotatef(rx, 1.0f, 0.0f, 0.0f);
 	glRotatef(ry, 0.0f, 1.0f, 0.0f);
 	glRotatef(rz, 0.0f, 0.0f, 1.0f);
@@ -1447,10 +1535,10 @@ void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1) {//////
 	glRotatef(0, 0.0f, 0.0f, 0.0f);
 	glutSolidTorus(0.2, 10, 30, 30);
 	glPopMatrix();
-
 }
 
-void renderCoords() {
+void renderCoords() 
+{
 	glColor3f(1.0, 0.0, 0.0);
 	renderString3D(20, 1.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
 	glColor3f(0.0, 1.0, 0.0);
@@ -1459,7 +1547,8 @@ void renderCoords() {
 	renderString3D(0.0f, 1.0f, 20, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
-//void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) {
+//void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) 
+//{
 //	float buttonMidX = buttonWidth / 2;
 //	float buttonMidY = buttonHeight / 2;
 //
@@ -1487,46 +1576,286 @@ void renderCoords() {
 //	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
 //}
 
-void resumeButton() {
+void resumeButton() 
+{
 	escKey = false;
 }
 
-void quit() {
+void quit()
+{
 	glutDestroyWindow(glutGetWindow());
 	exit(0);
-
 }
 
-void escapeMenu(int screenX, int screenY) {
-
+void escapeMenu(int screenX, int screenY) 
+{
 	int buttonWidth = 200;
 	int buttonHeight = 40;
 
-	/*glColor3f(1.0, 1.0, 1.0);
-	glBegin(GL_LINES);
-	glVertex2i(0, screenY/2);
-	glVertex2i(screenX, screenY/2);
-	glVertex2i(screenX/2, 0);
-	glVertex2i(screenX / 2, screenY);
-	glEnd();*/
-
-	glColor3f(1.0, 1.0, 0.0);
-	//Botao resume("Continue", buttonWidth, buttonHeight, resumeButton);
-	//resume.desenharBotao(screenX / 4, screenY / 2, mouseX, mouseY, lClick);
-
 	menuEsc.desenharMenu(screenX, screenY, mouseX, mouseY, lClick);
-	//drawButton(screenX / 2, screenY / 2, buttonWidth, buttonHeight, "Continue", resumeButton);
-
-	//todo
-	//	dynamic button generation
-	//	option button
-	//	quit button
 }
 
+bool textInput = false;
+bool addObjInterface = false;
+bool enterKey = false;
+int inputIndex = 0;
+int _add_tipoObj = 0;
+float _add_r, _add_g, _add_b;
+std::vector<float> _add_parametros;
 
+void keyboardTextInput(unsigned char key, int x, int y)
+{
+	if (textInput)
+	{
+		// Estamos no modo textInput, o teclado se comporta como um editor de texto
+		glutSetKeyRepeat(GLUT_KEY_REPEAT_ON);
+		glutKeyboardFunc(keyboardTextInput);
 
-void renderInterface() {
+		if (key == '\b') // Quando BACKSPACE é pressionado
+		{
+			inputString.pop_back(); // Apaga o último caractere
+			return;
+		}
 
+		if (key == '27') // Quando ESC é pressionado aborta o processo limpando todas as variaveis
+		{
+			textInput = false;
+			addObjInterface = false;
+			enterKey = false;
+			inputIndex = 0;
+			_add_tipoObj = 0;
+			_add_parametros.clear();
+
+			glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+			glutKeyboardFunc(processNormalKeys);
+			return;
+		}
+
+		if (key == 13) // Quando ENTER é pressionado
+		{
+			cout << "Linha digitada: " << inputString << endl; // cout string digitada
+			enterKey = true;
+			return; // Sai da função
+		}
+
+		inputString += key; // A tecla digitada é adicionada ao inputString para ser exibida na tela e/ou processada.
+	}
+	else
+	{
+		// Se não estamos no modo textInput, o callback e o comportamento do teclado volta ao normal
+		glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+		glutKeyboardFunc(processNormalKeys);
+	}
+}
+
+float processarCor(float input)
+{
+	if (input <= 0) return 0;
+	else if (input <= 1) return input;
+	else if (input <= 255) return input / 255;
+	else return 1;
+}
+
+void _addObj()
+{
+	float w = glutGet(GLUT_WINDOW_WIDTH);
+	float h = glutGet(GLUT_WINDOW_HEIGHT);
+
+	std::vector<string> nomeParametros;
+
+	addObjInterface = true;
+	textInput = true;
+
+	dialogString = "Digite o tipo de objeto (1-10): ";
+	glutKeyboardFunc(keyboardTextInput);
+
+	if (inputIndex > 0)
+	{
+		switch (_add_tipoObj)
+		{
+		case 0: // reta3d
+			nomeParametros = { "xi", "yi", "zi", "xf", "yf", "zf" };
+			break;
+		case 1: // cubo
+			nomeParametros = { "aresta (float)" };
+			break;
+		case 2: // cone
+			nomeParametros = { "raio (float)","altura (float)","nLados (int)", "divisoes (int)" };
+			break;
+		case 3: // cilindro
+			nomeParametros = { "raio (float)", "altura (float)", "nLados (int)" };
+			break;
+		case 4: // tubo
+			nomeParametros = { "raio interior (float)", "altura (float)", "espessura (float)", "nLados (int)" };
+			break;
+		case 5: // combo tubos
+			nomeParametros = { "raio interior (float)", "altura (float)", "espessura (float)", "nLados (int)" };
+			break;
+		case 6: // glut teapot
+			nomeParametros = { "tamanho (float)" };
+			break;
+		case 7: // glut cubo
+			nomeParametros = { "tamanho (float)" };
+			break;
+		case 8: // glut sphere
+			nomeParametros = { "raio (float)", "divisoes hori. (int)", "divisoes vert. (int)" };
+			break;
+		case 9: // glut teacup
+			nomeParametros = { "tamanho (float)" };
+			break;
+		case 10: // glut teaspoon
+			nomeParametros = { "tamanho (float)" };
+			break;
+		default:
+			break;
+		}
+	}
+
+	if (inputIndex == 0)
+	{
+		dialogString = "Digite o tipo de objeto (1-10): ";
+		if (enterKey)
+		{
+			_add_tipoObj = std::stoi(inputString);
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else if (inputIndex == 1)
+	{
+		dialogString = "Digite a cor Red (float 0-1)(int 0-255): ";
+		if (enterKey)
+		{
+			_add_r = processarCor(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else if (inputIndex == 2)
+	{
+		dialogString = "Digite a cor Green (float 0-1)(int 0-255): ";
+		if (enterKey)
+		{
+			_add_g = processarCor(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else if (inputIndex == 3)
+	{
+		dialogString = "Digite a cor Blue (float 0-1) (int 0-255): ";
+		if (enterKey)
+		{
+			_add_b = processarCor(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else if ((inputIndex - 3) <= nomeParametros.size())
+	{
+		dialogString = "Digite o parametro: " + nomeParametros[inputIndex - 4];
+		if (enterKey)
+		{
+			_add_parametros.push_back(std::stof(inputString));
+			inputString = ""; // Apaga string que o usuário escreveu
+			enterKey = false;
+			inputIndex++; // Adiciona 1 ao indice de input
+		}
+	}
+	else
+	{
+		// objeto criado e adicionado na origem do sis. coordenadas
+		ObjetoOpenGL novoObj(_add_tipoObj, 0.0, 0.0, 0.0, 0.0f, 0.0f, 0.0f, _add_r, _add_g, _add_b, _add_parametros);
+		Objetos[forma - 1].partes.emplace_back(novoObj);
+
+		textInput = false;
+		addObjInterface = false;
+		enterKey = false;
+		inputIndex = 0;
+		_add_tipoObj = 0;
+		_add_parametros.clear();
+
+		glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+		glutKeyboardFunc(processNormalKeys);
+	}
+}
+
+void _prevTipo()
+{
+	// É necessário criar novos parâmetros para o novo tipo de objeto
+	//if (Objetos[forma - 1].partes[parteIdx].tipo >= 0)
+	//{
+	//	Objetos[forma - 1].partes[parteIdx].tipo--;
+	//}
+}
+
+void _nextTipo()
+{
+	// É necessário criar novos parâmetros para o novo tipo de objeto
+	//if (Objetos[forma - 1].partes[parteIdx].tipo <= 10)
+	//{
+	//	Objetos[forma - 1].partes[parteIdx].tipo++;
+	//}
+}
+
+void _resetX() 
+{
+	Objetos[forma - 1].partes[parteIdx].x = 0;
+}
+
+void _resetY() 
+{
+	Objetos[forma - 1].partes[parteIdx].y = 0;
+}
+
+void _resetZ()
+{
+	Objetos[forma - 1].partes[parteIdx].z = 0;
+}
+
+void _resetR() 
+{
+	Objetos[forma - 1].partes[parteIdx].r = 0;
+}
+
+void _resetG()
+{
+	Objetos[forma - 1].partes[parteIdx].g = 0;
+}
+
+void _resetB()
+{
+	Objetos[forma - 1].partes[parteIdx].b = 0;
+}
+
+void _resetRx()
+{
+	Objetos[forma - 1].partes[parteIdx].rX = 0;
+}
+
+void _resetRy()
+{
+	Objetos[forma - 1].partes[parteIdx].rY = 0;
+}
+
+void _resetRz() 
+{
+	Objetos[forma - 1].partes[parteIdx].rZ = 0;
+}
+
+void _remove()
+{
+	Objetos[forma - 1].partes.erase(Objetos[forma - 1].partes.begin() + parteIdx); // Remove ObjetoOpenGL do array partes do objeto composto
+	parteSelecionada = 0; // Desseleciona objeto
+	lClick = false; // Garante que apenas um objeto é deletado por click
+}
+
+void renderInterface()
+{
 	float w = glutGet(GLUT_WINDOW_WIDTH);
 	float h = glutGet(GLUT_WINDOW_HEIGHT);
 	glMatrixMode(GL_PROJECTION); // setting up an orthogonal projection proportional to screen resolution
@@ -1538,13 +1867,18 @@ void renderInterface() {
 	glColor3f(1.0, 0.6, 0.0);
 	char mouseBuffer[50]; // mouse-cursor-following-text buffer
 
-	snprintf(mouseBuffer, sizeof mouseBuffer,
+	snprintf(
+		mouseBuffer,
+		sizeof mouseBuffer,
 		"(%d, %d)\nYaw = %.1f\nPitch = %.1f",
-		mouseX, mouseY, cameraYaw, cameraPitch);
+		mouseX, 
+		mouseY, 
+		cameraYaw,
+		cameraPitch);
 
-	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_8_BY_13, mouseBuffer); // mouse coords, pitch, yaw shown below cursor
+	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_8_BY_13, mouseBuffer); // coords, pitch, yaw aparecem abaixo do cursor
 
-	if (escKey) // if ESC key is pressed, only escape menu is loaded and all movement is blocked
+	if (escKey) // se ESC foi pressionado, apenas o menu é desenhado e o movimento é bloqueado
 	{
 		escapeMenu(w, h);
 		return;
@@ -1596,7 +1930,8 @@ void renderInterface() {
 		shadeModel ? "GL_SMOOTH" : "GL_FLAT",
 		xPos, yPos, zPos,
 		lookingAtX, lookingAtY, lookingAtZ,
-		visionX, visionY, visionZ);
+		visionX, visionY, visionZ
+	);
 
 	glColor3f(1.0, 1.0, 0.0);
 	renderString(5, h - 29, GLUT_BITMAP_9_BY_15, buffer);
@@ -1607,15 +1942,13 @@ void renderInterface() {
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
 		"| %2.2f | %2.2f | %2.2f | %2.2f | \n",
-
 		Mmodelview[0], Mmodelview[1], Mmodelview[2], Mmodelview[3],
 		Mmodelview[4], Mmodelview[5], Mmodelview[6], Mmodelview[7],
 		Mmodelview[8], Mmodelview[9], Mmodelview[10], Mmodelview[11],
 		Mmodelview[12], Mmodelview[13], Mmodelview[14], Mmodelview[15]
 	);
 
-	renderString(w - 300, h - 29, GLUT_BITMAP_9_BY_15, buffer);
-
+	renderString(w - 300, h - 59, GLUT_BITMAP_9_BY_15, buffer);
 
 	glPushMatrix(); // Mini camera XYZ axis
 	glTranslatef(w - 70, 70, 0); // Posicionamento
@@ -1658,9 +1991,52 @@ void renderInterface() {
 		glPopMatrix();
 	}
 
+	Botao addObj("Adicionar Objeto", 250, 40, _addObj);
+	addObj.desenharBotao(300, h - 200, mouseX, h - mouseY, lClick, true, GLUT_STROKE_ROMAN);
+
 	if (parteSelecionada)
 	{
-		draw2dBox(245, h - 380, 370, h - 600);
+		glColor3f(1, 1, 1);
+		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
+		if (winZ < 1) // Desenha linha saindo ddo centro da caixa até o centro do objeto
+		{
+			glPushMatrix();
+			glBegin(GL_LINES);
+			glVertex3f(winX, winY, winZ);
+			glVertex3f(322, (h - 490), 0);
+			glEnd();
+			glPopMatrix();
+		}
+		glColor3f(0.02, 0.02, 0.02);
+		draw2dBoxFilled(245, h - 380, 400, h - 600); // Desenha caixa para as informações do objeto
+		glColor3f(1.0, 0.8, 0.0);
+		draw2dBox(245, h - 380, 400, h - 600); // Desenha caixa para as informações do objeto
+
+		Botao prevTipo("<", 18, 13, _prevTipo);
+		prevTipo.desenharBotao(360, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao nextTipo(">", 18, 13, _nextTipo);
+		nextTipo.desenharBotao(384, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetX("Reset", 50, 13, _resetX);
+		resetX.desenharBotao(370, h - 413, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetY("Reset", 50, 13, _resetY);
+		resetY.desenharBotao(370, h - 429, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetZ("Reset", 50, 13, _resetZ);
+		resetZ.desenharBotao(370, h - 445, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetR("Reset", 50, 13, _resetR);
+		resetR.desenharBotao(370, h - 461, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetG("Reset", 50, 13, _resetG);
+		resetG.desenharBotao(370, h - 477, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetB("Reset", 50, 13, _resetB);
+		resetB.desenharBotao(370, h - 493, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetRx("Reset", 50, 13, _resetRx);
+		resetRx.desenharBotao(370, h - 509, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetRy("Reset", 50, 13, _resetRy);
+		resetRy.desenharBotao(370, h - 525, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao resetRz("Reset", 50, 13, _resetRz);
+		resetRz.desenharBotao(370, h - 541, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		Botao remove("Remover", 145, 13, _remove);
+		remove.desenharBotao(322, h - 557, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+
 		snprintf(buffer, sizeof buffer,
 			"tipo = %d\n"
 			"x = %.1f\n"
@@ -1684,23 +2060,25 @@ void renderInterface() {
 			objSelecionado.rZ);
 
 		glColor3f(1.0, 1.0, 1.0);
-		renderString(250, h - 400, GLUT_BITMAP_9_BY_15, buffer);
+		// Renderiza texto branco dentro da caixa de informações do objeto.
+		renderString(250, h - 401, GLUT_BITMAP_9_BY_15, buffer);
+	}
 
-		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
-
-		if (winZ < 1)
-		{
-			glPushMatrix();
-			glBegin(GL_LINES);
-			glVertex3f(winX, winY, winZ);
-			glVertex3f(370, (h - 490), 0);
-			glEnd();
-			glPopMatrix();
-		}
+	if (addObjInterface)
+	{
+		_addObj();
+		glColor3f(0.1, 0.1, 0.1);
+		draw2dBoxFilled(180, h - 50, 600, h - 150); // Desenha caixa para as informações do objeto
+		glColor3f(1.0, 0.8, 0.0);
+		draw2dBox(180, h - 50, 600, h - 150); // Desenha caixa para as informações do objeto
+		draw2dBox(180, h - 70, 600, h - 70);
+		renderString(185, h - 65, GLUT_BITMAP_9_BY_15, dialogString.c_str());
+		renderString(185, h - 84, GLUT_BITMAP_9_BY_15, inputString.c_str());
 	}
 }
 
-void renderWorld() {
+void renderWorld()
+{
 	int nome, i = 0;
 	nome = 7;
 	gluLookAt(xPos, yPos, zPos, lookingAtX, lookingAtY, lookingAtZ, 0, 1, 0);
@@ -1710,7 +2088,10 @@ void renderWorld() {
 
 	movement(); // movimento WASD
 	moving = false;
-	if (wKey || aKey || sKey || dKey || spaceKey || eKey) moving = true;
+	if (wKey || aKey || sKey || dKey || spaceKey || eKey)
+	{
+		moving = true;
+	}
 
 	angleX = (angleX >= 360) ? (angleX -= 360) : (angleX < 0) ? (angleX += 360) : angleX; // 0 <= angleX < 360
 	angleY = (angleY >= 360) ? (angleY -= 360) : (angleY < 0) ? (angleY += 360) : angleY;
@@ -1760,7 +2141,6 @@ void renderWorld() {
 
 	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
 	glColor3f(1, 1, 1);
-
 	glutSolidSphere((696340.0 / 1000000.0), 100, 100);
 	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
 
@@ -1808,7 +2188,8 @@ void renderWorld() {
 		glLoadName(nome);
 		parte.id = nome;
 
-		if (parteSelecionada == parte.id) {
+		if (parteSelecionada == parte.id)
+		{
 			glDisable(GL_LIGHTING);
 			objSelecionado = parte;
 			parteIdx = i;
@@ -1835,6 +2216,7 @@ void renderWorld() {
 			glColor3f(0, 0.5, 0);
 			glLoadName(nome); // Refaz glLoadName senão o nome é definido pelo último glLoadName dentro de xyzLines3d()
 		}
+
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
 		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
@@ -1888,35 +2270,29 @@ void renderWorld() {
 		i++;
 		nome++;
 	}
-
-	//gluProject(150, 18, 0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
-
-	//gluUnProject(mouseX, -mouseY, winZ, Mmodelview, Mprojection, viewport, &objX2, &objY2, &objZ2);
-
-
-
 }
 
-void render() {
-	frame++; // add a frame for framerate math
+void render()
+{
+	frame++; // Adiciona um frame para o cálculo do frametime e framerate
 	calculatedFrametime = ftime();
 	calculatedFramerate = fps();
-	definirTitle();
+	definirTitle(); // Define o título da janela
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
 
 	//3D
-	depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST); // preparing 3d world rendering
-	projMode ? loadWorldOrthoProj() : loadWorldPerspProj(); // loading chosen projection
+	depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST); // Prepara o mundo para renderização 3D
+	projMode ? loadWorldOrthoProj() : loadWorldPerspProj(); // Carrega perspectiva escolhida
 	if (!projMode)
 	{
 		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	}
-	glMatrixMode(GL_MODELVIEW); // swapping back to model view matrix
-	glLoadIdentity(); // load identity matrix
+	glMatrixMode(GL_MODELVIEW); // De volta à matriz modelview
+	glLoadIdentity(); // Carrega matriz identidade
 	renderWorld(); // 3d stuff
 
-	// 2D
+	// 2D, Interface
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_LIGHTING);
 	renderInterface();
@@ -1924,29 +2300,29 @@ void render() {
 	glutSwapBuffers();
 	glutPostRedisplay();
 
-	speed = calculatedFrametime * (0.1284f - 0.02839 * speedModifier);
+	// Modificador speed é aplicado no movimento para ser o mesmo independente da taxa de quadros
+	speed = calculatedFrametime * (0.05f - 0.03 * speedModifier);
 }
 
-void reshape(GLsizei w, GLsizei h) {
+void reshape(GLsizei w, GLsizei h)
+{
 	if (h == 0) h = 1;
-	// Especifica as dimensões da Viewport
 	glViewport(0, 0, w, h);
-	// Inicializa o sistema de coordenadas
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 	displayFileLoad();              // se estiver aqui, le somente uma vez
 	menuEsc.inicializarMenu();
 
 	glutInit(&argc, argv);            // Initialize GLUT
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_MULTISAMPLE);
 
-	//int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 80;
-	int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 800;
+	int RESOLUTION_INITIAL_WIDTH = glutGet(GLUT_SCREEN_WIDTH) - 80;
 	int RESOLUTION_INITIAL_HEIGHT = glutGet(GLUT_SCREEN_HEIGHT) - 120;
 
 	glutInitWindowSize(RESOLUTION_INITIAL_WIDTH, RESOLUTION_INITIAL_HEIGHT);     // Set the window's initial width & height
-	glutInitWindowPosition(780, 40);   // Position the window's initial top-left corner
+	glutInitWindowPosition(40, 40);   // Position the window's initial top-left corner
 	glutCreateWindow("");          // Create window with the given title
 	glutDisplayFunc(render);          // Register callback handler for window re-paint event
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
@@ -1958,11 +2334,8 @@ int main(int argc, char** argv) {
 	glutPassiveMotionFunc(mouseMovement);
 	glutMotionFunc(mouseMovement);
 	glutSetCursor(GLUT_CURSOR_CROSSHAIR);
-	//glutIdleFunc(render);
 	glutReshapeFunc(reshape);         // Register callback handler for window re-size event
 	initGL();
-	// Our own OpenGL initialization
-	//glutTimerFunc(8, update, 0);
 	glutMainLoop();                   // Enter the infinite event-processing loop
 	return 0;
 }
