@@ -11,7 +11,7 @@
 using namespace std;
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.3.0";
+char ver[8] = "1.3.1";
 
 const char filename[] = "df.txt";
 
@@ -203,7 +203,7 @@ depthTest = true,
 shadeModel = true,
 wKey, aKey, sKey, dKey, spaceKey, eKey, mKey,
 upKey, leftKey, rightKey, downKey, pgDnKey,
-pgUpKey, rClick, lClick, escKey, speedModifier;
+pgUpKey, rClick, lClick, escKey, speedModifierBool;
 
 int
 parteIdx = 0,
@@ -524,7 +524,7 @@ void processNormalKeys(unsigned char key, int x, int y)
 		eKey = true;
 		break;
 	case 'v':
-		speedModifier = !speedModifier;
+		speedModifierBool = !speedModifierBool;
 		break;
 	case 'm':
 		mKey = !mKey;
@@ -553,34 +553,34 @@ void processNormalKeys(unsigned char key, int x, int y)
 		shadeModel = !shadeModel;
 		shadeModel ? glShadeModel(GL_SMOOTH) : glShadeModel(GL_FLAT);
 		break;
-	case '1': 
+	case '1':
 		forma = 1;
 		break;
-	case '2': 
+	case '2':
 		forma = 2;
 		break;
 	case '3':
 		forma = 3;
 		break;
-	case '4': 
+	case '4':
 		forma = 4;
 		break;
-	case '5': 
+	case '5':
 		forma = 5;
 		break;
-	case '6': 
+	case '6':
 		forma = 6;
 		break;
-	case '7': 
+	case '7':
 		forma = 7;
 		break;
-	case '8': 
+	case '8':
 		forma = 8;
 		break;
-	case '9': 
+	case '9':
 		forma = 9;
 		break;
-	case '0': 
+	case '0':
 		forma = 10;
 		break;
 	}
@@ -988,32 +988,32 @@ void movement()
 
 	if (leftKey)
 	{
-		angleY--;
+		angleY -= 0.15 * speed;
 	}
 
 	if (rightKey)
 	{
-		angleY++;
+		angleY += 0.15 * speed;
 	}
 
 	if (upKey)
 	{
-		angleX--;
+		angleX -= 0.15 * speed;
 	}
 
 	if (downKey)
 	{
-		angleX++;
+		angleX += 0.15 * speed;
 	}
 
 	if (pgUpKey)
 	{
-		angleZ++;
+		angleZ += 0.15 * speed;
 	}
 
 	if (pgDnKey)
 	{
-		angleZ--;
+		angleZ -= 0.15 * speed;
 	}
 }
 
@@ -1548,7 +1548,7 @@ void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1)
 	glPopMatrix();
 }
 
-void renderCoords() 
+void renderCoords()
 {
 	glColor3f(1.0, 0.0, 0.0);
 	renderString3D(20, 1.0f, 0.0f, GLUT_BITMAP_TIMES_ROMAN_24, "X");
@@ -1587,7 +1587,7 @@ void renderCoords()
 //	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
 //}
 
-void resumeButton() 
+void resumeButton()
 {
 	escKey = false;
 }
@@ -1598,7 +1598,7 @@ void quit()
 	exit(0);
 }
 
-void escapeMenu(int screenX, int screenY) 
+void escapeMenu(int screenX, int screenY)
 {
 	int buttonWidth = 200;
 	int buttonHeight = 40;
@@ -1618,7 +1618,7 @@ int _add_tipoObj = 0;
 float _add_r, _add_g, _add_b;
 std::vector<float> _add_parametros;
 
-void enterInputMode() 
+void enterInputMode()
 {
 	textInterface = true;
 	textInput = true;
@@ -1626,14 +1626,16 @@ void enterInputMode()
 	glutKeyboardFunc(keyboardTextInput);
 }
 
-void exitInputMode() 
+void exitInputMode()
 {
+	/* Se não estamos no modo textInput, o callback e o comportamento do teclado volta ao normal */
 	textInput = false;
 	textInterface = false;
 	enterKey = false;
 	inputIndex = 0;
 	_add_tipoObj = 0;
 	_add_parametros.clear();
+	inputString = "";
 
 	glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
 	glutKeyboardFunc(processNormalKeys);
@@ -1643,32 +1645,38 @@ void keyboardTextInput(unsigned char key, int x, int y)
 {
 	if (textInput)
 	{
-		// Estamos no modo textInput, o teclado se comporta como um editor de texto
+		/* Estamos no modo textInput, o teclado se comporta como um editor de texto */
 
-		if (key == '\b') // Quando BACKSPACE é pressionado
+		if (key == '\b') /* Quando BACKSPACE é pressionado */
 		{
-			inputString.pop_back(); // Apaga o último caractere
+			try
+			{
+				inputString.pop_back(); /* Apaga o último caractere */
+			}
+			catch (const std::exception&) /* Não há caractere para apagar*/
+			{
+				return;
+			}
 			return;
 		}
 
-		if (key == '27') // Quando ESC é pressionado aborta o processo limpando todas as variaveis
+		if (key == 27) /* Quando ESC é pressionado aborta o processo limpando todas as variaveis */
 		{
 			exitInputMode();
 			return;
 		}
 
-		if (key == 13) // Quando ENTER é pressionado
+		if (key == 13) /* Quando ENTER é pressionado */
 		{
-			cout << "Linha digitada: " << inputString << endl; // cout string digitada
+			cout << "Linha digitada: " << inputString << endl;
 			enterKey = true;
-			return; // Sai da função
+			return; /* Sai da função, não adicionando a tecla enter à string de input */
 		}
 
 		inputString += key; // A tecla digitada é adicionada ao inputString para ser exibida na tela e/ou processada.
 	}
 	else
 	{
-		// Se não estamos no modo textInput, o callback e o comportamento do teclado volta ao normal
 		exitInputMode();
 	}
 }
@@ -1708,7 +1716,7 @@ void _addObj()
 			nomeParametros = { "raio (float)","altura (float)","nLados (int)", "divisoes (int)" };
 			break;
 		case 3: // cilindro
-			nomeParametros = { "raio (float)", "altura (float)", "nLados (int)" };
+			nomeParametros = { "raio (double)", "altura (double)", "slices (int)", "stacks (int)" };
 			break;
 		case 4: // tubo
 			nomeParametros = { "raio interior (float)", "altura (float)", "espessura (float)", "nLados (int)" };
@@ -1735,69 +1743,89 @@ void _addObj()
 			break;
 		}
 	}
-
-	if (inputIndex == 0)
+	try
 	{
-		dialogString = "Digite o tipo de objeto (1-10): ";
-		if (enterKey)
+		if (inputIndex == 0)
 		{
-			_add_tipoObj = std::stoi(inputString);
-			inputString = ""; // Apaga string que o usuário escreveu
-			enterKey = false;
-			inputIndex++; // Adiciona 1 ao indice de input
+			dialogString = "Digite o tipo de objeto (1-10): ";
+			if (enterKey)
+			{
+				_add_tipoObj = std::stoi(inputString);
+				inputString = ""; // Apaga string que o usuário escreveu
+				enterKey = false;
+				inputIndex++; // Adiciona 1 ao indice de input
+				if (_add_tipoObj < 0 || _add_tipoObj > 10)
+				{
+					inputIndex = 1000;
+				}
+			}
+		}
+		else if (inputIndex == 1)
+		{
+			dialogString = "Digite a cor Red (float 0-1)(int 0-255): ";
+			if (enterKey)
+			{
+				_add_r = processarCor(std::stof(inputString));
+				inputString = ""; // Apaga string que o usuário escreveu
+				enterKey = false;
+				inputIndex++; // Adiciona 1 ao indice de input
+			}
+		}
+		else if (inputIndex == 2)
+		{
+			dialogString = "Digite a cor Green (float 0-1)(int 0-255): ";
+			if (enterKey)
+			{
+				_add_g = processarCor(std::stof(inputString));
+				inputString = ""; // Apaga string que o usuário escreveu
+				enterKey = false;
+				inputIndex++; // Adiciona 1 ao indice de input
+			}
+		}
+		else if (inputIndex == 3)
+		{
+			dialogString = "Digite a cor Blue (float 0-1) (int 0-255): ";
+			if (enterKey)
+			{
+				_add_b = processarCor(std::stof(inputString));
+				inputString = ""; // Apaga string que o usuário escreveu
+				enterKey = false;
+				inputIndex++; // Adiciona 1 ao indice de input
+			}
+		}
+		else if ((inputIndex - 3) <= nomeParametros.size())
+		{
+			dialogString = "Digite o parametro: " + nomeParametros[inputIndex - 4];
+			if (enterKey)
+			{
+				_add_parametros.push_back(std::stof(inputString));
+				inputString = ""; // Apaga string que o usuário escreveu
+				enterKey = false;
+				inputIndex++; // Adiciona 1 ao indice de input
+			}
+		}
+		else if (inputIndex == 1000)
+		{
+			dialogString = "Parâmetro inválido recebido. Reinicie o processo. (ESC)";
+			if (enterKey)
+			{
+				_add_parametros.push_back(std::stof(inputString));
+				inputString = "INVÁLIDO"; // Apaga string que o usuário escreveu
+				enterKey = false;
+			}
+		}
+		else
+		{
+			// objeto criado e adicionado na origem do sis. coordenadas
+			ObjetoOpenGL novoObj(_add_tipoObj, 0.0, 0.0, 0.0, 0.0f, 0.0f, 0.0f, _add_r, _add_g, _add_b, _add_parametros);
+			Objetos[forma - 1].partes.emplace_back(novoObj);
+			_adding_obj = false;
+			exitInputMode();
 		}
 	}
-	else if (inputIndex == 1)
+	catch (const std::exception&)
 	{
-		dialogString = "Digite a cor Red (float 0-1)(int 0-255): ";
-		if (enterKey)
-		{
-			_add_r = processarCor(std::stof(inputString));
-			inputString = ""; // Apaga string que o usuário escreveu
-			enterKey = false;
-			inputIndex++; // Adiciona 1 ao indice de input
-		}
-	}
-	else if (inputIndex == 2)
-	{
-		dialogString = "Digite a cor Green (float 0-1)(int 0-255): ";
-		if (enterKey)
-		{
-			_add_g = processarCor(std::stof(inputString));
-			inputString = ""; // Apaga string que o usuário escreveu
-			enterKey = false;
-			inputIndex++; // Adiciona 1 ao indice de input
-		}
-	}
-	else if (inputIndex == 3)
-	{
-		dialogString = "Digite a cor Blue (float 0-1) (int 0-255): ";
-		if (enterKey)
-		{
-			_add_b = processarCor(std::stof(inputString));
-			inputString = ""; // Apaga string que o usuário escreveu
-			enterKey = false;
-			inputIndex++; // Adiciona 1 ao indice de input
-		}
-	}
-	else if ((inputIndex - 3) <= nomeParametros.size())
-	{
-		dialogString = "Digite o parametro: " + nomeParametros[inputIndex - 4];
-		if (enterKey)
-		{
-			_add_parametros.push_back(std::stof(inputString));
-			inputString = ""; // Apaga string que o usuário escreveu
-			enterKey = false;
-			inputIndex++; // Adiciona 1 ao indice de input
-		}
-	}
-	else
-	{
-		// objeto criado e adicionado na origem do sis. coordenadas
-		ObjetoOpenGL novoObj(_add_tipoObj, 0.0, 0.0, 0.0, 0.0f, 0.0f, 0.0f, _add_r, _add_g, _add_b, _add_parametros);
-		Objetos[forma - 1].partes.emplace_back(novoObj);
-		_adding_obj = false;
-		exitInputMode();
+		inputIndex = 1000;
 	}
 }
 
@@ -1819,12 +1847,12 @@ void _nextTipo()
 	//}
 }
 
-void _resetX() 
+void _resetX()
 {
 	Objetos[forma - 1].partes[parteIdx].x = 0;
 }
 
-void _resetY() 
+void _resetY()
 {
 	Objetos[forma - 1].partes[parteIdx].y = 0;
 }
@@ -1855,7 +1883,7 @@ void _editR() //--------------------------
 		Objetos[forma - 1].partes[parteIdx].r = _add_r; /* Modifica a cor editando o objeto diretamente */
 		_editing_r = false;
 		exitInputMode();
-	}		
+	}
 }
 
 void _editG()
@@ -1916,7 +1944,7 @@ void _resetRy()
 	Objetos[forma - 1].partes[parteIdx].rY = 0;
 }
 
-void _resetRz() 
+void _resetRz()
 {
 	Objetos[forma - 1].partes[parteIdx].rZ = 0;
 }
@@ -1945,8 +1973,8 @@ void renderInterface()
 		mouseBuffer,
 		sizeof mouseBuffer,
 		"(%d, %d)\nYaw = %.1f\nPitch = %.1f",
-		mouseX, 
-		mouseY, 
+		mouseX,
+		mouseY,
 		cameraYaw,
 		cameraPitch);
 
@@ -2012,17 +2040,17 @@ void renderInterface()
 
 	snprintf(buffer, sizeof buffer,
 		"GL_MODELVIEW_MATRIX \n"
-		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
-		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
-		"| %2.2f | %2.2f | %2.2f | %2.2f | \n"
-		"| %2.2f | %2.2f | %2.2f | %2.2f | \n",
+		"| % -3.3f | % -3.3f | % -3.3f | % -3.3f | \n"
+		"| % -3.3f | % -3.3f | % -3.3f | % -3.3f | \n"
+		"| % -3.3f | % -3.3f | % -3.3f | % -3.3f | \n"
+		"| % -6.1f | % -6.1f | % -6.1f | % -6.1f | \n",
 		Mmodelview[0], Mmodelview[1], Mmodelview[2], Mmodelview[3],
 		Mmodelview[4], Mmodelview[5], Mmodelview[6], Mmodelview[7],
 		Mmodelview[8], Mmodelview[9], Mmodelview[10], Mmodelview[11],
 		Mmodelview[12], Mmodelview[13], Mmodelview[14], Mmodelview[15]
 	);
 
-	renderString(w - 300, h - 59, GLUT_BITMAP_9_BY_15, buffer);
+	renderString(w - 350, h - 59, GLUT_BITMAP_9_BY_15, buffer);
 
 	glPushMatrix(); // Mini camera XYZ axis
 	glTranslatef(w - 70, 70, 0); // Posicionamento
@@ -2053,7 +2081,7 @@ void renderInterface()
 	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
 	glPopMatrix();
 
-	
+
 	if (forma == 5)
 	{
 		gluProject(150.0, 18.0, 0.0, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
@@ -2066,7 +2094,7 @@ void renderInterface()
 			glEnd();
 			renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Terra");
 			glPopMatrix();
-		}		
+		}
 	}
 
 	Botao addObj("Adicionar Objeto", 250, 40, _addObj);
@@ -2161,10 +2189,10 @@ void renderInterface()
 			_editB();
 		}
 		glColor3f(0.1, 0.1, 0.1);
-		draw2dBoxFilled(180, h - 50, 600, h - 150); // Desenha caixa para as informações do objeto
+		draw2dBoxFilled(180, h - 50, 700, h - 150); // Desenha caixa para as informações do objeto
 		glColor3f(1.0, 0.8, 0.0);
-		draw2dBox(180, h - 50, 600, h - 150); // Desenha caixa para as informações do objeto
-		draw2dBox(180, h - 70, 600, h - 70);
+		draw2dBox(180, h - 50, 700, h - 150); // Desenha caixa para as informações do objeto
+		draw2dBox(180, h - 70, 700, h - 70);
 		renderString(185, h - 65, GLUT_BITMAP_9_BY_15, dialogString.c_str());
 		renderString(185, h - 84, GLUT_BITMAP_9_BY_15, inputString.c_str());
 	}
@@ -2190,9 +2218,9 @@ void renderWorld()
 	angleY = (angleY >= 360) ? (angleY -= 360) : (angleY < 0) ? (angleY += 360) : angleY;
 	angleZ = (angleZ >= 360) ? (angleZ -= 360) : (angleZ < 0) ? (angleZ += 360) : angleZ;
 
-	rotX = angleX += 0.5 * animate * animateX; // rotX = ângulo modificado pelas setas * speed factor(0.5) * bool animação global * bool animação em eixo específico 
-	rotY = angleY += 0.5 * animate * animateY;
-	rotZ = angleZ += 0.5 * animate * animateZ;
+	rotX = angleX += 0.2 * animate * animateX * speed; // rotX = ângulo modificado pelas setas * speed factor(0.2) * bool animação global * bool animação em eixo específico * modificador speed
+	rotY = angleY += 0.2 * animate * animateY * speed;
+	rotZ = angleZ += 0.2 * animate * animateZ * speed;
 
 	visionMag = sqrt(pow(visionX, 2) + pow(visionY, 2) + pow(visionZ, 2));
 	versorVisionX = (visionX = (lookingAtX - xPos)) / visionMag;
@@ -2332,7 +2360,10 @@ void renderWorld()
 			break;
 		case 3:
 			// float radius, float height, int nLados
-			cilindro(parte.params[0], parte.params[1], parte.params[2]);
+			//cilindro(parte.params[0], parte.params[1], parte.params[2]);
+
+			// double radius, double height, GLint slices, GLint stacks
+			glutSolidCylinder(parte.params[0], parte.params[1], parte.params[2], parte.params[3]);
 			break;
 		case 4:
 			// float innerRadius, float height, float thickness, int nLados
@@ -2367,7 +2398,7 @@ void renderWorld()
 
 void render()
 {
-	
+
 
 
 	frame++; // Adiciona um frame para o cálculo do frametime e framerate
@@ -2397,7 +2428,7 @@ void render()
 	glutPostRedisplay();
 
 	// Modificador speed é aplicado no movimento para ser o mesmo independente da taxa de quadros
-	speed = calculatedFrametime * (0.05f - 0.03 * speedModifier);
+	speed = calculatedFrametime * (0.05f - 0.04 * speedModifierBool);
 
 
 
