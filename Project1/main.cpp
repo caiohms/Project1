@@ -11,7 +11,7 @@
 using namespace std;
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.2.2";
+char ver[8] = "1.3.0";
 
 const char filename[] = "df.txt";
 
@@ -1521,22 +1521,24 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1)
 {
 	glRotatef(rx, 1.0f, 0.0f, 0.0f);
-	glRotatef(ry, 0.0f, 1.0f, 0.0f);
-	glRotatef(rz, 0.0f, 0.0f, 1.0f);
 
 	glColor3f(1.0, 0.0, 0.0); // Red - X 
 	glLoadName(4);
 	glPushMatrix();
-	glRotatef(-90, 0.0f, 1.0f, 0.0f);
+	glRotatef(90, 0.0f, 1.0f, 0.0f);
 	glutSolidTorus(0.2, 10, 30, 30);
 	glPopMatrix();
+
+	glRotatef(ry, 0.0f, 1.0f, 0.0f);
 
 	glColor3f(0.0, 1.0, 0.0); // Green - Y
 	glLoadName(5);
 	glPushMatrix();
-	glRotatef(90, 1.0f, 0.0f, 0.0f);
+	glRotatef(-90, 1.0f, 0.0f, 0.0f);
 	glutSolidTorus(0.2, 10, 30, 30);
 	glPopMatrix();
+
+	glRotatef(rz, 0.0f, 0.0f, 1.0f);
 
 	glColor3f(0.0, 0.0, 1.0); // Blue - Z 
 	glLoadName(6);
@@ -2365,6 +2367,9 @@ void renderWorld()
 
 void render()
 {
+	
+
+
 	frame++; // Adiciona um frame para o cálculo do frametime e framerate
 	calculatedFrametime = ftime();
 	calculatedFramerate = fps();
@@ -2393,6 +2398,9 @@ void render()
 
 	// Modificador speed é aplicado no movimento para ser o mesmo independente da taxa de quadros
 	speed = calculatedFrametime * (0.05f - 0.03 * speedModifier);
+
+
+
 }
 
 void reshape(GLsizei w, GLsizei h)
