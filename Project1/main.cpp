@@ -11,7 +11,7 @@
 using namespace std;
 
 char title[128] = "OpenGL-PUCPR - Formas geométricas";
-char ver[8] = "1.3.1";
+char ver[8] = "1.3.2";
 
 const char filename[] = "df.txt";
 
@@ -201,7 +201,9 @@ moving,
 globalIllumination = true,
 depthTest = true,
 shadeModel = true,
-wKey, aKey, sKey, dKey, spaceKey, eKey, mKey,
+mKey = true,
+slashKey = true,
+wKey, aKey, sKey, dKey, spaceKey, eKey,
 upKey, leftKey, rightKey, downKey, pgDnKey,
 pgUpKey, rClick, lClick, escKey, speedModifierBool;
 
@@ -250,12 +252,8 @@ speed = 1.0f,
 deltaPosicaoX = 0.0f,
 deltaPosicaoY = 0.0f,
 deltaPosicaoZ = 0.0f,
-objMovX,
-objMovY,
-objMovZ,
-lastObjMovX,
-lastObjMovY,
-lastObjMovZ,
+objMovX, objMovY, objMovZ,
+lastObjMovX, lastObjMovY, lastObjMovZ,
 cameraSensitivity = 0.1f;
 
 GLdouble
@@ -285,7 +283,7 @@ void displayFileLoad()
 	numObjects
 	nome
 	numPartes
-	tipo x y z r g b numParametros	parametro[0] parametro[...] parametro[numParametros]  (Por exemplo aresta do cubo, raio/comprimento de um cilindro)
+	tipo x y z r g b numParametros parametro[0] parametro[...] parametro[numParametros-1]  (Por exemplo aresta do cubo, raio/comprimento de um cilindro)
 	nome (Próximo objeto)
 	...
 	*/
@@ -479,8 +477,13 @@ void processNormalKeys(unsigned char key, int x, int y)
 	//printf("%c  -  %d, %d\n", key, x, y);
 	switch (key)
 	{
+	case ';':
+	case '/':
+		slashKey = !slashKey;
+		break;
 	case 27: /* esc */
 		escKey = !escKey;
+		break;
 	case 'r':
 		Retas.clear();
 		idSelecionado = 0;
@@ -582,8 +585,11 @@ void processNormalKeys(unsigned char key, int x, int y)
 		break;
 	case '0':
 		forma = 10;
+		globalIllumination = false;
+		front = true;
 		break;
 	}
+
 	if (key >= 48 && key <= 57) // Mudança de objeto, desselecionar objeto // 0 a 9
 	{
 		idSelecionado = 0;
@@ -1956,6 +1962,11 @@ void _remove()
 	lClick = false; // Garante que apenas um objeto é deletado por click
 }
 
+void fecharInstrucoes() 
+{
+	slashKey = !slashKey;
+}
+
 void renderInterface()
 {
 	float w = glutGet(GLUT_WINDOW_WIDTH);
@@ -1988,7 +1999,7 @@ void renderInterface()
 
 	char buffer[1024];
 	snprintf(buffer, sizeof buffer,
-		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    %.1fFPS    %3.0fms   global_speed_multiplier= %.3f\n"
+		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    FPS= %.1f    frametime= %3.0fms   speed= %.3f\n"
 		"%s= %.1f%s\n"
 		"X= %.1f°\n"
 		"Y= %.1f°\n"
@@ -2075,12 +2086,60 @@ void renderInterface()
 			strcat_s(menuBuffer, sizeof(menuBuffer), itemBuffer);
 		}
 	}
-	strcat_s(menuBuffer, sizeof(menuBuffer), "Press M key for object menu");
+	strcat_s(menuBuffer, sizeof(menuBuffer), "Pressione M para menu de objetos");
 	glPushMatrix();
 	glColor3f(1.0, 1.0, 0.0);
 	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
 	glPopMatrix();
+	
+	char instructionsBuffer[4096] = "     Pressione '/' para exibir instruções\n\n";
+	if (slashKey)
+	{		
+		glPushMatrix();
+		glColor3f(0.1, 0.1, 0.1);
+		draw2dBoxFilled(490, h - 40, 1000, h - 500); // Desenha caixa de informações
+		glColor3f(1.0, 0.8, 0.0);
+		draw2dBox(490, h - 40, 1000, h - 500);
+		draw2dBox(490, h - 70, 1000, h - 70);
+		glPopMatrix();
 
+		Botao fecharInstrucoes("Fechar", 70, 15, fecharInstrucoes);
+		fecharInstrucoes.desenharBotao(960, h - 55, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+
+		strcat_s(instructionsBuffer, sizeof(instructionsBuffer),
+			"ESC      -> Menu de opções \n"
+			"1 - 10   -> Selecionar cena  \n"
+			"w        -> Movimento para frente \n"
+			"a        -> Movimento para esquerda \n"
+			"s        -> Movimento para trás \n"
+			"d        -> Movimento para direita\n"
+			"e        -> Movimento para baixo \n"
+			"Spacebar -> Movimento para cima \n"
+			"Setas    -> Rotação global \n"
+			"PgUp     -> Rotação global \n"
+			"PgDn     -> Rotação global \n"
+			"i        -> Iluminação \n"
+			"L        -> Toggle ShadeMode (SMOOTH ou FLAT) \n"
+			"r        -> Reset \n"
+			"n        -> Animação automática \n"
+			"x, y, z  -> Animação automática em cada eixo \n"
+			"f        -> Toggle GL_FRONT (FILL ou LINE) \n"
+			"b        -> Toggle GL_BACK (FILL ou LINE) \n"
+			"c        -> Toggle CULL_FACE \n"
+			"t        -> Toggle DEPTH_TEST \n"
+			"v        -> Toggle velocidade \n"
+			"p        -> Toggle perspectiva (Projeção ou Ortogonal) \n"
+			"m        -> Menu de objetos compostos (displayfile) \n"
+			"F1       -> Carregar displayfile \n"
+			"F2       -> Salvar modificações no displayfile \n"
+			"F11      -> Toggle FULLSCREEN \n"
+		);
+	}
+	
+	glPushMatrix();
+	glColor3f(1.0, 1.0, 0.0);
+	renderString(500, h-60, GLUT_BITMAP_9_BY_15, instructionsBuffer);
+	glPopMatrix();
 
 	if (forma == 5)
 	{
@@ -2095,6 +2154,17 @@ void renderInterface()
 			renderString(winX + 2, winY + 9, GLUT_BITMAP_9_BY_15, "Terra");
 			glPopMatrix();
 		}
+	}
+	if (forma == 10)
+	{
+		glPushMatrix();
+		glColor3f(0.1, 0.1, 0.1);
+		draw2dBoxFilled(240, 80, 1250, 48); // Desenha caixa de informações
+		glColor3f(1.0, 0.8, 0.0);
+		draw2dBox(240, 80, 1250, 48);
+		glColor3f(1.0, 1.0, 0.0);
+		renderString(250, 60, GLUT_BITMAP_9_BY_15, "Neste objeto a iluminação foi desativada e o glPolygonMode(GL_FRONT) está em GL_LINES para melhor visualização");
+		glPopMatrix();
 	}
 
 	Botao addObj("Adicionar Objeto", 250, 40, _addObj);
@@ -2341,7 +2411,7 @@ void renderWorld()
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
 		glRotatef(parte.rY, 0.0f, 1.0f, 0.0f);
-		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);		
+		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
 		glRotatef(parte.rZ, 0.0f, 0.0f, 1.0f);
 
 		switch (parte.tipo)
@@ -2429,9 +2499,6 @@ void render()
 
 	// Modificador speed é aplicado no movimento para ser o mesmo independente da taxa de quadros
 	speed = calculatedFrametime * (0.05f - 0.04 * speedModifierBool);
-
-
-
 }
 
 void reshape(GLsizei w, GLsizei h)
