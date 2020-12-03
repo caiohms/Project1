@@ -1520,21 +1520,21 @@ void xyzLines3d(float sizeFactor = 1, float lengthFactor = 1, float thicknessFac
 
 void rotationTorus3d(float rx, float ry, float rz, float sizeFactor = 1)
 {
-	glRotatef(rx, 1.0f, 0.0f, 0.0f);
-
-	glColor3f(1.0, 0.0, 0.0); // Red - X 
-	glLoadName(4);
-	glPushMatrix();
-	glRotatef(90, 0.0f, 1.0f, 0.0f);
-	glutSolidTorus(0.2, 10, 30, 30);
-	glPopMatrix();
-
 	glRotatef(ry, 0.0f, 1.0f, 0.0f);
 
 	glColor3f(0.0, 1.0, 0.0); // Green - Y
 	glLoadName(5);
 	glPushMatrix();
 	glRotatef(-90, 1.0f, 0.0f, 0.0f);
+	glutSolidTorus(0.2, 10, 30, 30);
+	glPopMatrix();
+
+	glRotatef(rx, 1.0f, 0.0f, 0.0f);
+
+	glColor3f(1.0, 0.0, 0.0); // Red - X 
+	glLoadName(4);
+	glPushMatrix();
+	glRotatef(90, 0.0f, 1.0f, 0.0f);
 	glutSolidTorus(0.2, 10, 30, 30);
 	glPopMatrix();
 
@@ -2340,8 +2340,8 @@ void renderWorld()
 
 		glPushMatrix();
 		glTranslatef(parte.x, parte.y, parte.z);
-		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);
 		glRotatef(parte.rY, 0.0f, 1.0f, 0.0f);
+		glRotatef(parte.rX, 1.0f, 0.0f, 0.0f);		
 		glRotatef(parte.rZ, 0.0f, 0.0f, 1.0f);
 
 		switch (parte.tipo)
