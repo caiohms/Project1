@@ -1,3 +1,17 @@
+Ôªø/*
+* Aluno: Caio Henrique Martins dos Santos
+* Disciplina: Constru√ß√£o de Software Gr√°fico 3D
+* Data: 02/dez/2020
+*
+* CG - Trabalho Final
+*
+* Utilizado Visual Studio 2019
+* Platform Toolset Visual Studio 2015 (v140)
+* Target Platform Version 10.0.18362.0
+*
+* Requer C++11
+*/
+
 #include <windows.h>  
 #include <GL\freeglut.h>  
 #define _USE_MATH_DEFINES
@@ -10,8 +24,8 @@
 
 using namespace std;
 
-char title[128] = "OpenGL-PUCPR - Formas geomÈtricas";
-char ver[8] = "1.3.2";
+char title[128] = "OpenGL-PUCPR - Formas geom√©tricas";
+char ver[8] = "1.3.3";
 
 const char filename[] = "df.txt";
 
@@ -32,9 +46,9 @@ class ObjetoOpenGL
 public:
 	int tipo, id = 0;
 	//bool selected;
-	double x, y, z; /* PosiÁ„o */
-	float rX, rY, rZ, r, g, b; /* RotaÁ„o e cor */
-	std::vector<float> params; /* Vetor de par‚metros adicionais */
+	double x, y, z; /* Posi√ß√£o */
+	float rX, rY, rZ, r, g, b; /* Rota√ß√£o e cor */
+	std::vector<float> params; /* Vetor de par√¢metros adicionais */
 
 	ObjetoOpenGL(int Tipo, double X, double Y, double Z, float RX, float RY, float RZ, float R, float G, float B, std::vector<float> Parametros)
 	{
@@ -57,9 +71,9 @@ public:
 class ObjetoCompostoOpenGL
 {
 	/*
-	Representa um objeto composto, selecion·vel pelas teclas 0-9 no teclado.
+	Representa um objeto composto, selecion√°vel pelas teclas 0-9 no teclado.
 	Possui um nome em texto definido no displayfile e um vetor de partes do tipo ObjetoOpenGL que
-	compıem a cena.
+	comp√µem a cena.
 	*/
 public:
 	char nome[50];
@@ -76,11 +90,11 @@ public:
 
 class Botao
 {
-	/* Objeto Bot„o que o usu·rio pode clicar, executando um mÈtodo F()*/
+	/* Objeto Bot√£o que o usu√°rio pode clicar, executando um m√©todo F()*/
 public:
 	char nome[50];
-	int w, h; /* PosiÁ„o do bot„o em relaÁ„o ‡ borda esquerda superior da tela*/
-	std::function<void()> f; /* MÈtodo armazenado executado on click */
+	int w, h; /* Posi√ß√£o do bot√£o em rela√ß√£o √† borda esquerda superior da tela*/
+	std::function<void()> f; /* M√©todo armazenado executado on click */
 
 	Botao(const char* Nome, int W, int H, void F())
 	{
@@ -93,7 +107,7 @@ public:
 	void desenharBotao(int x, int y, int mouseX, int mouseY, bool lClick, bool strokeString = true, void* font = GLUT_STROKE_MONO_ROMAN)
 	{
 
-		/* Floats definidos abaixo posicionam o bot„o com centro na coordenada x,y da viewport */
+		/* Floats definidos abaixo posicionam o bot√£o com centro na coordenada x,y da viewport */
 		float
 			buttonMidX = w / 2,
 			buttonMidY = h / 2,
@@ -113,7 +127,7 @@ public:
 
 		if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY)
 		{
-			/* Mouse sobre o bot„o? */
+			/* Mouse sobre o bot√£o? */
 			glColor3f(0.0, 1.0, 0.0);
 			draw2dBox(leftX, bottomY, rightX, topY);  /* Desenha outline verde */
 			if (lClick) f(); /* Executa f() */
@@ -134,7 +148,7 @@ public:
 
 class MenuEsc
 {
-	/* Menu com opÁıes que aparece quando o usu·rio aperta ESC */
+	/* Menu com op√ß√µes que aparece quando o usu√°rio aperta ESC */
 public:
 	std::vector<Botao> botoes;
 	int bw = 300;
@@ -154,7 +168,7 @@ public:
 	{
 		for (size_t i = 0; i < botoes.size(); i++)
 		{
-			int top = (int)(windowH / 2) - 10 - botoes.size() * bh / 2; // Determina a menor posiÁ„o Y, topo do primeiro bot„o
+			int top = (int)(windowH / 2) - 10 - botoes.size() * bh / 2; // Determina a menor posi√ß√£o Y, topo do primeiro bot√£o
 			botoes[i].desenharBotao(windowW / 2, top + (bh + 10) * i, mouseX, windowH - mouseY, lClick);
 		}
 	}
@@ -284,7 +298,7 @@ void displayFileLoad()
 	nome
 	numPartes
 	tipo x y z r g b numParametros parametro[0] parametro[...] parametro[numParametros-1]  (Por exemplo aresta do cubo, raio/comprimento de um cilindro)
-	nome (PrÛximo objeto)
+	nome (Pr√≥ximo objeto)
 	...
 	*/
 	int numObjects, numPartes;
@@ -310,7 +324,7 @@ void displayFileLoad()
 		for (int j = 1; j <= numPartes; j++) // Para cada parte
 		{
 			parametros.clear();
-			inStream >> tipo >> x >> y >> z >> rX >> rY >> rZ >> r >> g >> b >> numParametros; // LÍ um objeto open gl (uma parte)
+			inStream >> tipo >> x >> y >> z >> rX >> rY >> rZ >> r >> g >> b >> numParametros; // L√™ um objeto open gl (uma parte)
 			for (int k = 0; k < numParametros; k++) // Para cada parametro adicional, le uma linha nova com cada parametro
 			{
 				float p;
@@ -319,7 +333,7 @@ void displayFileLoad()
 			}
 			ObjetoOpenGL parte(tipo, x, y, z, rX, rY, rZ, r, g, b, parametros); // Cria a parte
 			//parte.distribuirParametros(parametros); // distribui os parametros lidos para as variaveis dentro do objeto 'parte'
-			novoObjeto.partes.push_back(parte); // mexendo na vari·vel p˙blica para fins de teste
+			novoObjeto.partes.push_back(parte); // mexendo na vari√°vel p√∫blica para fins de teste
 		}
 		Objetos.push_back(novoObjeto);
 	}
@@ -590,7 +604,7 @@ void processNormalKeys(unsigned char key, int x, int y)
 		break;
 	}
 
-	if (key >= 48 && key <= 57) // MudanÁa de objeto, desselecionar objeto // 0 a 9
+	if (key >= 48 && key <= 57) // Mudan√ßa de objeto, desselecionar objeto // 0 a 9
 	{
 		idSelecionado = 0;
 		parteSelecionada = 0;
@@ -661,6 +675,7 @@ unsigned int selecionarObjeto()
 
 void desenharRaycast()
 {
+	/* Desenha reta de onde o usu√°rio est√° at√© o ponto em zFar ou um objeto para onde seu mouse aponta */
 
 	glReadPixels(mouseX, viewport[3] - mouseY, 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &mouseZ);
 	gluUnProject(mouseX, viewport[3] - mouseY, mouseZ, Mmodelview, Mprojection, viewport, &objX, &objY, &objZ);
@@ -670,18 +685,14 @@ void desenharRaycast()
 
 	ObjetoOpenGL objReta(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, p);
 
-	Retas.emplace_back(objReta);
-
-	//printf("%d\n", Retas.size());
+	Retas.emplace_back(objReta); /* Ao final adiciona ao vetor Retas*/
 }
 
 void mouse(int button, int state, int x, int y)
 {
-	printf("%d button %s at %d %d\n", button, (state == GLUT_DOWN) ? "Down" : "Up", x, y);
-
 	if (button == 0) // left click
 	{
-		// Coordenadas s„o salvas e estado clicado È usado por outras funÁıes
+		// Coordenadas s√£o salvas e estado clicado √© usado por outras fun√ß√µes
 		if (rClick) return;
 		if (state == GLUT_DOWN)
 		{
@@ -691,19 +702,23 @@ void mouse(int button, int state, int x, int y)
 
 			if (!(x > 245 && x < 400 && y > 380 && y < 600 && parteSelecionada || escKey))
 			{
-				// Mouse n„o est· em cima do menu do objeto, e pode selecionar novos objetos
+				// Mouse n√£o est√° em cima do menu do objeto, e pode selecionar novos objetos
 				idSelecionado = selecionarObjeto();
 				if (idSelecionado == 0)
 				{
 					parteSelecionada = 0;
 				}
-				if (idSelecionado > 6)
+				if (idSelecionado > 6) 
 				{
+					/*
+					* Os ids de 1 a 6 s√£o destinados aos objetos que fazem a movimenta√ß√£o/rota√ß√£o (xyzLines3d e rotationTorus3d)
+					* apenas modificamos qual objeto (parte) est√° selecionado caso o usu√°rio escolha outro que n√£o √© um objeto 
+					* com funcionalidade de movimenta√ß√£o.
+					*/
 					parteSelecionada = idSelecionado;
 				}
-				//printf("%d idSelecionado\n", idSelecionado);
 			}
-			//desenharRaycast();
+			//desenharRaycast(); /* Descomentar para habilitar ray casting em cada clique */
 		}
 		else
 		{
@@ -733,7 +748,7 @@ void mouse(int button, int state, int x, int y)
 	if ((button == 3) || (button == 4)) // scroll wheel
 	{
 		if (state == GLUT_UP) return;
-		// Scroll wheel muda nRange quando em projeÁ„o ortogonal e muda angleV quando em projeÁ„o perspectiva
+		// Scroll wheel muda nRange quando em proje√ß√£o ortogonal e muda angleV quando em proje√ß√£o perspectiva
 		if (button == 3)
 		{
 			if (projMode)
@@ -790,44 +805,44 @@ void mouseMovement(int x, int y)
 	lastObjMovZ = objZ;
 
 
-	if (lClick)
+	if (lClick) /* Quando o usu√°rio clica com o bot√£o esquerdo do mouse */
 	{
-		switch ((int)(idSelecionado))
+		switch ((int)(idSelecionado)) /* Se ele selecionou um objeto com funcionalidade de movimenta√ß√£o, mudan√ßas s√£o aplicadas com movimento do mouse */
 		{
-		default:
-			break;
 		case 1:
-			// Usuario selecionou movimentaÁ„o no eixo X
+			// Usuario selecionou movimenta√ß√£o no eixo X
 			Objetos[forma - 1].partes[parteIdx].x += deltaPosicaoX * 10;
 			break;
 		case 2:
-			// Usuario selecionou movimentaÁ„o no eixo Y
+			// Usuario selecionou movimenta√ß√£o no eixo Y
 			Objetos[forma - 1].partes[parteIdx].y += deltaPosicaoY * 10;
 			break;
 		case 3:
-			// Usuario selecionou movimentaÁ„o no eixo Z
+			// Usuario selecionou movimenta√ß√£o no eixo Z
 			Objetos[forma - 1].partes[parteIdx].z += deltaPosicaoZ * 10;
 			break;
 		case 4:
-			// Usuario selecionou movimentaÁ„o no eixo de rotaÁ„o rX
+			// Usuario selecionou movimenta√ß√£o no eixo de rota√ß√£o rX
 			Objetos[forma - 1].partes[parteIdx].rX += deltaPosicaoY * 10;
 			break;
 		case 5:
-			// Usuario selecionou movimentaÁ„o no eixo de rotaÁ„o rY
+			// Usuario selecionou movimenta√ß√£o no eixo de rota√ß√£o rY
 			Objetos[forma - 1].partes[parteIdx].rY += deltaPosicaoY * 10;
 			break;
 		case 6:
-			// Usuario selecionou movimentaÁ„o no eixo de rotaÁ„o rZ
+			// Usuario selecionou movimenta√ß√£o no eixo de rota√ß√£o rZ
 			Objetos[forma - 1].partes[parteIdx].rZ += deltaPosicaoY * 10;
+			break;
+		default:
 			break;
 		}
 	}
 
-	if (rClick)
+	if (rClick) /* Bot√£o direito do mouse = movimenta√ß√£o da c√¢mera */
 	{
-		if (!escKey) // bloqueia movimentaÁ„o da c‚mera quando o menu ESC È aberto
+		if (!escKey) // bloqueia movimenta√ß√£o da c√¢mera quando o menu ESC √© aberto
 		{
-			cameraPitch -= mouseMovedY * cameraSensitivity; // pitch e yaw mudam de acorco com diferenÁas nas coordenadas do mouse
+			cameraPitch -= mouseMovedY * cameraSensitivity; // pitch e yaw mudam de acorco com diferen√ßas nas coordenadas do mouse
 			cameraYaw += mouseMovedX * cameraSensitivity;
 		}
 
@@ -842,7 +857,7 @@ void mouseMovement(int x, int y)
 
 		cameraYaw = (cameraYaw > 360) ? (cameraYaw - 360) : (cameraYaw < 0) ? (cameraYaw + 360) : cameraYaw; // limitando yaw ao intervalo (0, 360)
 
-		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch)); // c‚mera se move em um sistema de coordenadas esfÈricas
+		lookingAtX = xPos + cos(toRadians(cameraYaw)) * cos(toRadians(cameraPitch)); // c√¢mera se move em um sistema de coordenadas esf√©ricas
 		lookingAtY = yPos + sin(toRadians(cameraPitch));
 		lookingAtZ = zPos + sin(toRadians(cameraYaw)) * cos(toRadians(cameraPitch));
 	}
@@ -850,7 +865,7 @@ void mouseMovement(int x, int y)
 
 void normalize2d(float x, float y, float* returnX, float* returnY)
 {
-	// funcao antiga mas deixarei para n„o ter que mexer no que ja esta funcionando
+	// funcao antiga mas deixarei para n√£o ter que mexer no que ja esta funcionando
 	float magnitude = sqrt(pow(x, 2) + pow(y, 2));
 
 	*returnX = x / magnitude;
@@ -859,7 +874,7 @@ void normalize2d(float x, float y, float* returnX, float* returnY)
 
 void normalizarVetor(float v[], size_t s, float* vOut)
 {
-	// Recebe um vetor v[] s-dimensional e retorna vetor unit·rio em vOut
+	// Recebe um vetor v[] s-dimensional e retorna vetor unit√°rio em vOut
 	float mag = 0;
 
 	float* nV = new float[s];
@@ -882,7 +897,7 @@ void normalizarVetor(float v[], size_t s, float* vOut)
 
 	memcpy(vOut, nV, sizeof(1.0f) * s);
 
-	delete[] nV; // memory leak bizarro
+	delete[] nV;
 }
 
 void calcNormal(float v[3][3], float out[3])
@@ -903,30 +918,6 @@ void calcNormal(float v[3][3], float out[3])
 	v3[z] = v1[x] * v2[y] - v1[y] * v2[x];
 
 	normalizarVetor(v3, 3, out);
-
-	//glBegin(GL_LINES);
-	//glColor3f(1, 1, 0);
-	//glVertex3f(0, 0, 0);
-	//glVertex3f(v1[0], v1[1], v1[2]);
-	//glEnd();
-
-	//glBegin(GL_LINES);
-	//glColor3f(0, 1, 0);
-	//glVertex3f(0, 0, 0);
-	//glVertex3f(v2[0], v2[1], v2[2]);
-	//glEnd();
-
-	//glBegin(GL_LINES);
-	//glColor3f(0, 1, 0);
-	//glVertex3f(0, 0, 0);
-	//glVertex3f(v3[0], v3[1], v3[2]);
-	//glEnd();
-
-	//glBegin(GL_LINES);
-	//glColor3f(0, 1, 0);
-	//glVertex3f(0, 0, 0);
-	//glVertex3f(out[0], out[1], out[2]);
-	//glEnd();
 }
 
 void movement()
@@ -1050,7 +1041,7 @@ void definirTitle()
 	snprintf(
 		title,
 		sizeof title,
-		" OpenGL-PUCPR - Formas geomÈtricas - Caio Santos | vers„o %s %dx%d  %.1fFPS %.0fms ",
+		" OpenGL-PUCPR - Formas geom√©tricas - Caio Santos | vers√£o %s %dx%d  %.1fFPS %.0fms ",
 		ver,
 		glutGet(GLUT_WINDOW_WIDTH),
 		glutGet(GLUT_WINDOW_HEIGHT),
@@ -1193,7 +1184,7 @@ void cone(float radius, float height, int nLados, int divisoes)
 				o (0,height,0)
 				|\
 			  | | \
-			  v |  \    antihor·rio
+			  v |  \    antihor√°rio
 				|   \
 	last(x,y,z) o----o (x,y,z)
 				2 ->  3
@@ -1564,35 +1555,6 @@ void renderCoords()
 	renderString3D(0.0f, 1.0f, 20, GLUT_BITMAP_TIMES_ROMAN_24, "Z");
 }
 
-//void drawButton(int bx, int by, int buttonWidth, int buttonHeight, const char* text, void f()) 
-//{
-//	float buttonMidX = buttonWidth / 2;
-//	float buttonMidY = buttonHeight / 2;
-//
-//	float leftX = bx - buttonMidX;
-//	float bottomY = by - buttonMidY;
-//	float rightX = bx + buttonMidX;
-//	float topY = by + buttonMidY;
-//
-//	char buffer[9];
-//	snprintf(buffer, sizeof(buffer), text);
-//
-//	if (leftX < mouseX && mouseX < rightX && bottomY < mouseY && mouseY < topY) // mouse pointer over button
-//	{
-//		glColor3f(0.0, 1.0, 0.0);
-//		draw2dBoxFilled(leftX, bottomY, rightX, topY);
-//		if (lClick) f();
-//
-//	}
-//	else
-//	{
-//		glColor3f(0.1, 0.1, 0.1);
-//		draw2dBoxFilled(leftX, bottomY, rightX, topY);
-//	}
-//	glColor3f(1, 1, 1);
-//	renderStrokeString(bx + 9, bottomY + 9, buffer, 0.22, true);
-//}
-
 void resumeButton()
 {
 	escKey = false;
@@ -1634,7 +1596,7 @@ void enterInputMode()
 
 void exitInputMode()
 {
-	/* Se n„o estamos no modo textInput, o callback e o comportamento do teclado volta ao normal */
+	/* Se n√£o estamos no modo textInput, o callback e o comportamento do teclado volta ao normal */
 	textInput = false;
 	textInterface = false;
 	enterKey = false;
@@ -1653,33 +1615,33 @@ void keyboardTextInput(unsigned char key, int x, int y)
 	{
 		/* Estamos no modo textInput, o teclado se comporta como um editor de texto */
 
-		if (key == '\b') /* Quando BACKSPACE È pressionado */
+		if (key == '\b') /* Quando BACKSPACE √© pressionado */
 		{
 			try
 			{
-				inputString.pop_back(); /* Apaga o ˙ltimo caractere */
+				inputString.pop_back(); /* Apaga o √∫ltimo caractere */
 			}
-			catch (const std::exception&) /* N„o h· caractere para apagar*/
+			catch (const std::exception&) /* N√£o h√° caractere para apagar*/
 			{
 				return;
 			}
 			return;
 		}
 
-		if (key == 27) /* Quando ESC È pressionado aborta o processo limpando todas as variaveis */
+		if (key == 27) /* Quando ESC √© pressionado aborta o processo limpando todas as variaveis */
 		{
 			exitInputMode();
 			return;
 		}
 
-		if (key == 13) /* Quando ENTER È pressionado */
+		if (key == 13) /* Quando ENTER √© pressionado */
 		{
 			cout << "Linha digitada: " << inputString << endl;
 			enterKey = true;
-			return; /* Sai da funÁ„o, n„o adicionando a tecla enter ‡ string de input */
+			return; /* Sai da fun√ß√£o, n√£o adicionando a tecla enter √† string de input */
 		}
 
-		inputString += key; // A tecla digitada È adicionada ao inputString para ser exibida na tela e/ou processada.
+		inputString += key; // A tecla digitada √© adicionada ao inputString para ser exibida na tela e/ou processada.
 	}
 	else
 	{
@@ -1745,6 +1707,9 @@ void _addObj()
 		case 10: // glut teaspoon
 			nomeParametros = { "tamanho (float)" };
 			break;
+		case 11: // plano
+			nomeParametros = { "y (float)", "tamanho (float)", "divisoes (int)" };
+			break;
 		default:
 			break;
 		}
@@ -1757,10 +1722,10 @@ void _addObj()
 			if (enterKey)
 			{
 				_add_tipoObj = std::stoi(inputString);
-				inputString = ""; // Apaga string que o usu·rio escreveu
+				inputString = ""; // Apaga string que o usu√°rio escreveu
 				enterKey = false;
 				inputIndex++; // Adiciona 1 ao indice de input
-				if (_add_tipoObj < 0 || _add_tipoObj > 10)
+				if (_add_tipoObj < 0 || _add_tipoObj > 11)
 				{
 					inputIndex = 1000;
 				}
@@ -1772,7 +1737,7 @@ void _addObj()
 			if (enterKey)
 			{
 				_add_r = processarCor(std::stof(inputString));
-				inputString = ""; // Apaga string que o usu·rio escreveu
+				inputString = ""; // Apaga string que o usu√°rio escreveu
 				enterKey = false;
 				inputIndex++; // Adiciona 1 ao indice de input
 			}
@@ -1783,7 +1748,7 @@ void _addObj()
 			if (enterKey)
 			{
 				_add_g = processarCor(std::stof(inputString));
-				inputString = ""; // Apaga string que o usu·rio escreveu
+				inputString = ""; // Apaga string que o usu√°rio escreveu
 				enterKey = false;
 				inputIndex++; // Adiciona 1 ao indice de input
 			}
@@ -1794,7 +1759,7 @@ void _addObj()
 			if (enterKey)
 			{
 				_add_b = processarCor(std::stof(inputString));
-				inputString = ""; // Apaga string que o usu·rio escreveu
+				inputString = ""; // Apaga string que o usu√°rio escreveu
 				enterKey = false;
 				inputIndex++; // Adiciona 1 ao indice de input
 			}
@@ -1805,18 +1770,18 @@ void _addObj()
 			if (enterKey)
 			{
 				_add_parametros.push_back(std::stof(inputString));
-				inputString = ""; // Apaga string que o usu·rio escreveu
+				inputString = ""; // Apaga string que o usu√°rio escreveu
 				enterKey = false;
 				inputIndex++; // Adiciona 1 ao indice de input
 			}
 		}
 		else if (inputIndex == 1000)
 		{
-			dialogString = "Par‚metro inv·lido recebido. Reinicie o processo. (ESC)";
+			dialogString = "Par√¢metro inv√°lido recebido. Reinicie o processo. (ESC)";
 			if (enterKey)
 			{
 				_add_parametros.push_back(std::stof(inputString));
-				inputString = "INV¡LIDO"; // Apaga string que o usu·rio escreveu
+				inputString = "INV√ÅLIDO"; // Apaga string que o usu√°rio escreveu
 				enterKey = false;
 			}
 		}
@@ -1833,24 +1798,6 @@ void _addObj()
 	{
 		inputIndex = 1000;
 	}
-}
-
-void _prevTipo()
-{
-	// … necess·rio criar novos par‚metros para o novo tipo de objeto
-	//if (Objetos[forma - 1].partes[parteIdx].tipo >= 0)
-	//{
-	//	Objetos[forma - 1].partes[parteIdx].tipo--;
-	//}
-}
-
-void _nextTipo()
-{
-	// … necess·rio criar novos par‚metros para o novo tipo de objeto
-	//if (Objetos[forma - 1].partes[parteIdx].tipo <= 10)
-	//{
-	//	Objetos[forma - 1].partes[parteIdx].tipo++;
-	//}
 }
 
 void _resetX()
@@ -1879,7 +1826,7 @@ void _editR() //--------------------------
 		if (enterKey)
 		{
 			_add_r = processarCor(std::stof(inputString));
-			inputString = ""; // Apaga string que o usu·rio escreveu
+			inputString = ""; // Apaga string que o usu√°rio escreveu
 			enterKey = false;
 			inputIndex++; // Adiciona 1 ao indice de input
 		}
@@ -1903,7 +1850,7 @@ void _editG()
 		if (enterKey)
 		{
 			_add_g = processarCor(std::stof(inputString));
-			inputString = ""; // Apaga string que o usu·rio escreveu
+			inputString = ""; // Apaga string que o usu√°rio escreveu
 			enterKey = false;
 			inputIndex++; // Adiciona 1 ao indice de input
 		}
@@ -1927,7 +1874,7 @@ void _editB()
 		if (enterKey)
 		{
 			_add_b = processarCor(std::stof(inputString));
-			inputString = ""; // Apaga string que o usu·rio escreveu
+			inputString = ""; // Apaga string que o usu√°rio escreveu
 			enterKey = false;
 			inputIndex++; // Adiciona 1 ao indice de input
 		}
@@ -1959,10 +1906,10 @@ void _remove()
 {
 	Objetos[forma - 1].partes.erase(Objetos[forma - 1].partes.begin() + parteIdx); // Remove ObjetoOpenGL do array partes do objeto composto
 	parteSelecionada = 0; // Desseleciona objeto
-	lClick = false; // Garante que apenas um objeto È deletado por click
+	lClick = false; // Garante que apenas um objeto √© deletado por click
 }
 
-void fecharInstrucoes() 
+void fecharInstrucoes()
 {
 	slashKey = !slashKey;
 }
@@ -1991,7 +1938,7 @@ void renderInterface()
 
 	renderString(mouseX - 5 + 7, h - mouseY - 4 - 14, GLUT_BITMAP_8_BY_13, mouseBuffer); // coords, pitch, yaw aparecem abaixo do cursor
 
-	if (escKey) // se ESC foi pressionado, apenas o menu È desenhado e o movimento È bloqueado
+	if (escKey) // se ESC foi pressionado, apenas o menu √© desenhado e o movimento √© bloqueado
 	{
 		escapeMenu(w, h);
 		return;
@@ -2001,9 +1948,9 @@ void renderInterface()
 	snprintf(buffer, sizeof buffer,
 		"ProjectionMode = %s    AspectRatio= %f    Resolution= %.0fx%.0f    FPS= %.1f    frametime= %3.0fms   speed= %.3f\n"
 		"%s= %.1f%s\n"
-		"X= %.1f∞\n"
-		"Y= %.1f∞\n"
-		"Z= %.1f∞\n"
+		"X= %.1f¬∞\n"
+		"Y= %.1f¬∞\n"
+		"Z= %.1f¬∞\n"
 		"(r)eset\n"
 		"X (up)-(down)\n"
 		"Y (left)-(right)\n"
@@ -2030,7 +1977,7 @@ void renderInterface()
 		(w / h), w, h, calculatedFramerate, calculatedFrametime, speed,
 		projMode ? "nRange" : "angleV",
 		projMode ? nRange : angleV,
-		projMode ? "" : "∞",
+		projMode ? "" : "¬∞",
 		rotX, rotY, rotZ,
 		animate ? "true" : "false",
 		animateX ? "true" : "false",
@@ -2091,54 +2038,57 @@ void renderInterface()
 	glColor3f(1.0, 1.0, 0.0);
 	renderString(5, 20 + 16 * Objetos.size() * mKey, GLUT_BITMAP_9_BY_15, menuBuffer);
 	glPopMatrix();
-	
-	char instructionsBuffer[4096] = "     Pressione '/' para exibir instruÁıes\n\n";
+
+	char instructionsBuffer[4096] = "     Pressione '/' para exibir instru√ß√µes\n\n";
 	if (slashKey)
-	{		
+	{
 		glPushMatrix();
 		glColor3f(0.1, 0.1, 0.1);
-		draw2dBoxFilled(490, h - 40, 1000, h - 500); // Desenha caixa de informaÁıes
+		draw2dBoxFilled(490, h - 40, 1150, h - 550); // Desenha caixa de informa√ß√µes
 		glColor3f(1.0, 0.8, 0.0);
-		draw2dBox(490, h - 40, 1000, h - 500);
-		draw2dBox(490, h - 70, 1000, h - 70);
+		draw2dBox(490, h - 40, 1150, h - 550);
+		draw2dBox(490, h - 70, 1150, h - 70);
 		glPopMatrix();
 
 		Botao fecharInstrucoes("Fechar", 70, 15, fecharInstrucoes);
-		fecharInstrucoes.desenharBotao(960, h - 55, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
+		fecharInstrucoes.desenharBotao(1110, h - 55, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
 
 		strcat_s(instructionsBuffer, sizeof(instructionsBuffer),
-			"ESC      -> Menu de opÁıes \n"
+			"ESC      -> Menu de op√ß√µes \n"
 			"1 - 10   -> Selecionar cena  \n"
 			"w        -> Movimento para frente \n"
 			"a        -> Movimento para esquerda \n"
-			"s        -> Movimento para tr·s \n"
+			"s        -> Movimento para tr√°s \n"
 			"d        -> Movimento para direita\n"
 			"e        -> Movimento para baixo \n"
 			"Spacebar -> Movimento para cima \n"
-			"Setas    -> RotaÁ„o global \n"
-			"PgUp     -> RotaÁ„o global \n"
-			"PgDn     -> RotaÁ„o global \n"
-			"i        -> IluminaÁ„o \n"
+			"Setas    -> Rota√ß√£o global \n"
+			"PgUp     -> Rota√ß√£o global \n"
+			"PgDn     -> Rota√ß√£o global \n"
+			"i        -> Ilumina√ß√£o \n"
 			"L        -> Toggle ShadeMode (SMOOTH ou FLAT) \n"
 			"r        -> Reset \n"
-			"n        -> AnimaÁ„o autom·tica \n"
-			"x, y, z  -> AnimaÁ„o autom·tica em cada eixo \n"
+			"n        -> Anima√ß√£o autom√°tica (ainda √© necess√°rio ativar cada eixo)\n"
+			"x, y, z  -> Anima√ß√£o autom√°tica em cada eixo \n"
 			"f        -> Toggle GL_FRONT (FILL ou LINE) \n"
 			"b        -> Toggle GL_BACK (FILL ou LINE) \n"
 			"c        -> Toggle CULL_FACE \n"
 			"t        -> Toggle DEPTH_TEST \n"
 			"v        -> Toggle velocidade \n"
-			"p        -> Toggle perspectiva (ProjeÁ„o ou Ortogonal) \n"
+			"p        -> Toggle perspectiva (Proje√ß√£o ou Ortogonal) \n"
 			"m        -> Menu de objetos compostos (displayfile) \n"
 			"F1       -> Carregar displayfile \n"
-			"F2       -> Salvar modificaÁıes no displayfile \n"
+			"F2       -> Salvar modifica√ß√µes no displayfile \n"
 			"F11      -> Toggle FULLSCREEN \n"
+			"\n"
+			"Mouse esquerdo           -> Seleciona objeto e interage com a interface \n"
+			"Mouse direito + arrastar -> Movimento da c√¢mera \n"
 		);
 	}
-	
+
 	glPushMatrix();
 	glColor3f(1.0, 1.0, 0.0);
-	renderString(500, h-60, GLUT_BITMAP_9_BY_15, instructionsBuffer);
+	renderString(500, h - 60, GLUT_BITMAP_9_BY_15, instructionsBuffer);
 	glPopMatrix();
 
 	if (forma == 5)
@@ -2159,11 +2109,11 @@ void renderInterface()
 	{
 		glPushMatrix();
 		glColor3f(0.1, 0.1, 0.1);
-		draw2dBoxFilled(240, 80, 1250, 48); // Desenha caixa de informaÁıes
+		draw2dBoxFilled(240, 80, 1250, 48); // Desenha caixa de informa√ß√µes
 		glColor3f(1.0, 0.8, 0.0);
 		draw2dBox(240, 80, 1250, 48);
 		glColor3f(1.0, 1.0, 0.0);
-		renderString(250, 60, GLUT_BITMAP_9_BY_15, "Neste objeto a iluminaÁ„o foi desativada e o glPolygonMode(GL_FRONT) est· em GL_LINES para melhor visualizaÁ„o");
+		renderString(250, 60, GLUT_BITMAP_9_BY_15, "Neste objeto a ilumina√ß√£o foi desativada e o glPolygonMode(GL_FRONT) est√° em GL_LINES para melhor visualiza√ß√£o");
 		glPopMatrix();
 	}
 
@@ -2174,7 +2124,7 @@ void renderInterface()
 	{
 		glColor3f(1, 1, 1);
 		gluProject(objSelecionado.x, objSelecionado.y, objSelecionado.z, Mmodelview, Mprojection, viewport, &winX, &winY, &winZ);
-		if (winZ < 1) // Desenha linha saindo ddo centro da caixa atÈ o centro do objeto
+		if (winZ < 1) // Desenha linha saindo ddo centro da caixa at√© o centro do objeto
 		{
 			glPushMatrix();
 			glBegin(GL_LINES);
@@ -2184,9 +2134,9 @@ void renderInterface()
 			glPopMatrix();
 		}
 		glColor3f(0.02, 0.02, 0.02);
-		draw2dBoxFilled(245, h - 380, 410, h - 600); // Desenha caixa para as informaÁıes do objeto
+		draw2dBoxFilled(245, h - 380, 410, h - 600); // Desenha caixa para as informa√ß√µes do objeto
 		glColor3f(1.0, 0.8, 0.0);
-		draw2dBox(245, h - 380, 410, h - 600); // Desenha caixa para as informaÁıes do objeto
+		draw2dBox(245, h - 380, 410, h - 600); // Desenha caixa para as informa√ß√µes do objeto
 
 		//Botao prevTipo("<", 18, 13, _prevTipo);
 		//prevTipo.desenharBotao(370, h - 397, mouseX, h - mouseY, lClick, false, GLUT_BITMAP_8_BY_13);
@@ -2221,9 +2171,9 @@ void renderInterface()
 			"r = %.4f\n"
 			"g = %.4f\n"
 			"b = %.4f\n"
-			"rx = %.1f∞\n"
-			"ry = %.1f∞\n"
-			"rz = %.1f∞\n",
+			"rx = %.1f¬∞\n"
+			"ry = %.1f¬∞\n"
+			"rz = %.1f¬∞\n",
 			objSelecionado.tipo,
 			objSelecionado.x,
 			objSelecionado.y,
@@ -2236,7 +2186,7 @@ void renderInterface()
 			objSelecionado.rZ);
 
 		glColor3f(1.0, 1.0, 1.0);
-		// Renderiza texto branco dentro da caixa de informaÁıes do objeto.
+		// Renderiza texto branco dentro da caixa de informa√ß√µes do objeto.
 		renderString(250, h - 401, GLUT_BITMAP_9_BY_15, buffer);
 	}
 
@@ -2259,9 +2209,9 @@ void renderInterface()
 			_editB();
 		}
 		glColor3f(0.1, 0.1, 0.1);
-		draw2dBoxFilled(180, h - 50, 700, h - 150); // Desenha caixa para as informaÁıes do objeto
+		draw2dBoxFilled(180, h - 50, 700, h - 150); // Desenha caixa para as informa√ß√µes do objeto
 		glColor3f(1.0, 0.8, 0.0);
-		draw2dBox(180, h - 50, 700, h - 150); // Desenha caixa para as informaÁıes do objeto
+		draw2dBox(180, h - 50, 700, h - 150); // Desenha caixa para as informa√ß√µes do objeto
 		draw2dBox(180, h - 70, 700, h - 70);
 		renderString(185, h - 65, GLUT_BITMAP_9_BY_15, dialogString.c_str());
 		renderString(185, h - 84, GLUT_BITMAP_9_BY_15, inputString.c_str());
@@ -2288,7 +2238,7 @@ void renderWorld()
 	angleY = (angleY >= 360) ? (angleY -= 360) : (angleY < 0) ? (angleY += 360) : angleY;
 	angleZ = (angleZ >= 360) ? (angleZ -= 360) : (angleZ < 0) ? (angleZ += 360) : angleZ;
 
-	rotX = angleX += 0.2 * animate * animateX * speed; // rotX = ‚ngulo modificado pelas setas * speed factor(0.2) * bool animaÁ„o global * bool animaÁ„o em eixo especÌfico * modificador speed
+	rotX = angleX += 0.2 * animate * animateX * speed; // rotX = √¢ngulo modificado pelas setas * speed factor(0.2) * bool anima√ß√£o global * bool anima√ß√£o em eixo espec√≠fico * modificador speed
 	rotY = angleY += 0.2 * animate * animateY * speed;
 	rotZ = angleZ += 0.2 * animate * animateZ * speed;
 
@@ -2302,21 +2252,39 @@ void renderWorld()
 	GLfloat luzDifusa[4] = { 0.9, 0.9, 0.9, 1.0 };	   // "cor" 
 	GLfloat luzEspecular[4] = { 1.0, 1.0, 1.0, 1.0 };// "brilho" 
 
+
 	GLfloat posicaoLuz[4] = { 0.0, 18.0, 0.0, 1.0 };
 
 	// Capacidade de brilho do material
 	GLfloat especularidade[4] = { 1.0,1.0,1.0,1.0 };
 	GLint especMaterial = 60;
 
-	// Habilita o modelo de colorizaÁ„o de Gouraud
+	if (forma == 4) /* Sem√°foro */
+	{
+		luzDifusa[0] = 0.2;
+		luzDifusa[1] = 1.0;
+		luzDifusa[2] = 0.2;
+		luzDifusa[3] = 1.0;	   // "cor" 
+		luzEspecular[0] = 0.3;
+		luzEspecular[1] = 1.0;
+		luzEspecular[2] = 0.3;
+		luzEspecular[3] = 1.0;
+		posicaoLuz[0] = 1.8;
+		posicaoLuz[1] = 38.0079;
+		posicaoLuz[2] = 4.92311;
+		posicaoLuz[3] = 1.0;
+		especMaterial = 20;
+	}
+
+	// Habilita o modelo de coloriza√ß√£o de Gouraud
 	//glShadeModel(GL_SMOOTH); // glShadeModel(GL_FLAT);
-	// Define a reflet‚ncia do material 
+	// Define a reflet√¢ncia do material 
 	glMaterialfv(GL_FRONT, GL_SPECULAR, especularidade);
-	// Define a concentraÁ„o do brilho
+	// Define a concentra√ß√£o do brilho
 	glMateriali(GL_FRONT, GL_SHININESS, especMaterial);
 	// Ativa o uso da luz ambiente 
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, luzAmbiente);
-	// Define os par‚metros da luz de n˙mero 0
+	// Define os par√¢metros da luz de n√∫mero 0
 	glLightfv(GL_LIGHT0, GL_AMBIENT, luzAmbiente);
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, luzDifusa);
 	glLightfv(GL_LIGHT0, GL_SPECULAR, luzEspecular);
@@ -2325,14 +2293,18 @@ void renderWorld()
 	//glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 2);
 	//glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.005f);
 
-	// Habilita a definiÁ„o da cor do material a partir da cor corrente
+	// Habilita a defini√ß√£o da cor do material a partir da cor corrente
 
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_LIGHT0);
 
 	glTranslatef(posicaoLuz[0], posicaoLuz[1], posicaoLuz[2]);
-	glColor3f(1, 1, 1);
+	glColor3f(luzDifusa[0], luzDifusa[1], luzDifusa[2]);
 	glutSolidSphere((696340.0 / 1000000.0), 100, 100);
+	if (forma == 4)
+	{
+		glutSolidSphere(1.05, 100, 100);
+	}
 	glTranslatef(-posicaoLuz[0], -posicaoLuz[1], -posicaoLuz[2]);
 
 	globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
@@ -2349,8 +2321,8 @@ void renderWorld()
 	glGetIntegerv(GL_VIEWPORT, viewport);
 
 	glDisable(GL_LIGHTING);
-	//xyzLines();
-	//renderCoords();
+	xyzLines();
+	renderCoords();
 
 	objetoCompostoAtual = Objetos[forma - 1];
 
@@ -2364,7 +2336,7 @@ void renderWorld()
 		renderString3D(778.57, 18.01, 0.0, GLUT_BITMAP_9_BY_15, "Jupiter");
 	}
 
-	for (ObjetoOpenGL r : Retas)
+	for (ObjetoOpenGL r : Retas) /* Desenha as retas geradas na fun√ß√£o desenharRaycast */
 	{
 		glColor3f(1, 1, 1);
 		glPushMatrix();
@@ -2376,22 +2348,34 @@ void renderWorld()
 	{
 		globalIllumination ? glEnable(GL_LIGHTING) : glDisable(GL_LIGHTING);
 		glColor3f(parte.r, parte.g, parte.b);
-		glLoadName(nome);
-		parte.id = nome;
+		glLoadName(nome); /* A cada objeto √© atribu√≠do um nome, e este nome √© adicionado a uma vari√°vel do pr√≥prio objeto*/
+		parte.id = nome;  /* Ent√£o podemos realizar alguma a√ß√£o sobre o objeto selecionado */
 
 		if (parteSelecionada == parte.id)
 		{
+			/* Se o objeto do loop atual √© o selecionado */
 			glDisable(GL_LIGHTING);
 			objSelecionado = parte;
 			parteIdx = i;
 
 			if (!moving && rotX == 0 && rotY == 0 && rotZ == 0)
 			{
+				/* 
+				* Se a c√¢mera n√£o est√° se movendo, e se n√£o tiver sido feita nenhuma rota√ß√£o global (usando as setas)
+				* √â desenhado entre a posi√ß√£o da c√¢mera e a posi√ß√£o do objeto um  xyzLines3d, que o usu√°rio pode arrastar
+				* para movimentar o objeto.
+				* Tamb√©m √© desenhado um rotationTorus3d que pode ser arrastado para cima ou para baixo, rotacionando o
+				* objeto em cada eixo correspondente. A ordem de rota√ß√£o √© Y - X - Z.
+				*/
 				float x = xPos - parte.x;
 				float y = yPos - parte.y;
 				float z = zPos - parte.z;
+
 				float vo[3], v[3] = { x,y,z };
 				normalizarVetor(v, 3, vo);
+
+				/* v = vetor do objeto at√© a c√¢mera */
+				/* vo = v normalizado*/
 
 				glPushMatrix();
 				glTranslatef(xPos - vo[0] * 5, yPos - vo[1] * 5, zPos - vo[2] * 5);
@@ -2405,7 +2389,7 @@ void renderWorld()
 
 			}
 			glColor3f(0, 0.5, 0);
-			glLoadName(nome); // Refaz glLoadName sen„o o nome È definido pelo ˙ltimo glLoadName dentro de xyzLines3d()
+			glLoadName(nome); // Refaz glLoadName sen√£o o nome √© definido pelo √∫ltimo glLoadName dentro de xyzLines3d()
 		}
 
 		glPushMatrix();
@@ -2459,6 +2443,10 @@ void renderWorld()
 		case 10:
 			glutSolidTeaspoon(parte.params[0]);
 			break;
+		case 11:
+			glMateriali(GL_FRONT, GL_SHININESS, 5); /* especularidade do plano reduzida */
+			plano(parte.params[0], parte.params[1], parte.params[2]);
+			break;
 		}
 		glPopMatrix();
 		i++;
@@ -2468,24 +2456,21 @@ void renderWorld()
 
 void render()
 {
-
-
-
-	frame++; // Adiciona um frame para o c·lculo do frametime e framerate
+	frame++; // Adiciona um frame para o c√°lculo do frametime e framerate
 	calculatedFrametime = ftime();
 	calculatedFramerate = fps();
-	definirTitle(); // Define o tÌtulo da janela
+	definirTitle(); // Define o t√≠tulo da janela
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear color and depth buffers
 
 	//3D
-	depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST); // Prepara o mundo para renderizaÁ„o 3D
+	depthTest ? glEnable(GL_DEPTH_TEST) : glDisable(GL_DEPTH_TEST); // Prepara o mundo para renderiza√ß√£o 3D
 	projMode ? loadWorldOrthoProj() : loadWorldPerspProj(); // Carrega perspectiva escolhida
 	if (!projMode)
 	{
 		glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 	}
-	glMatrixMode(GL_MODELVIEW); // De volta ‡ matriz modelview
+	glMatrixMode(GL_MODELVIEW); // De volta √† matriz modelview
 	glLoadIdentity(); // Carrega matriz identidade
 	renderWorld(); // 3d stuff
 
@@ -2497,7 +2482,7 @@ void render()
 	glutSwapBuffers();
 	glutPostRedisplay();
 
-	// Modificador speed È aplicado no movimento para ser o mesmo independente da taxa de quadros
+	// Modificador speed √© aplicado no movimento para ser o mesmo independente da taxa de quadros
 	speed = calculatedFrametime * (0.05f - 0.04 * speedModifierBool);
 }
 
